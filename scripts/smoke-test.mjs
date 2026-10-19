@@ -139,7 +139,13 @@ const puppyContactJs = await (await import('node:fs/promises')).readFile(new URL
 const contactApiSource = await (await import('node:fs/promises')).readFile(new URL('../functions/api/contact.js', import.meta.url), 'utf8');
 const contactEmailSource = await (await import('node:fs/promises')).readFile(new URL('../functions/lib/contact-email.js', import.meta.url), 'utf8');
 assert.match(puppyHtml, /id="puppy-enquiry-cta" href="\/contact\/"/, 'puppy contact CTA should point to the listing-specific contact route');
-assert.match(puppyContactHtml, /name="shippingAddress"[\s\S]*name="country"[\s\S]*name="preferredPaymentMethod"/, 'puppy contact page should collect shipping and payment preferences');
+assert.match(puppyContactHtml, /name="shippingAddress"[\s\S]*class="form-field form-field-full"[\s\S]*name="postalCode"[\s\S]*name="preferredPaymentMethod"/, 'puppy contact page should collect shipping and payment preferences, with a full-width postal code field');
+assert.doesNotMatch(puppyContactHtml, /id="shipping-country"|name="country"|>Country/, 'puppy contact page should not show a country field');
+const puppyContactCss = await (await import('node:fs/promises')).readFile(new URL('../assets/css/puppy-contact.css', import.meta.url), 'utf8');
+assert.match(puppyContactCss, /\.puppy-contact-intro h1 \{[^}]*max-width:none;[^}]*text-align:center;/, 'puppy contact heading should be centered without the site-wide h1 max-width offset');
+assert.match(puppyContactCss, /\.puppy-contact-form \.form-field-full \{[^}]*width:100%;/, 'postal code form field should take full width');
+assert.doesNotMatch(puppyContactJs, /form\.elements\.country|country:\s*form\.elements/, 'contact form client should no longer validate or submit a country field');
+assert.doesNotMatch(contactApiSource, /city\.length < 2 \|\| country\.length < 2/, 'server should not require a country field for puppy enquiries');
 assert.match(puppyContactHtml, /class="site-header"[\s\S]*class="site-footer"/, 'puppy contact page should share the site header and footer');
 assert.match(puppyContactJs, /fetch\('\/api\/puppies\?slug='/, 'puppy contact page should load the selected listing');
 assert.match(contactApiSource, /enquiryType === 'puppy-contact'[\s\S]*getPrivateDocument\(context\.env, `puppies\/\$\{puppySlug\}`\)/, 'server should validate puppy contact submissions against a real listing');

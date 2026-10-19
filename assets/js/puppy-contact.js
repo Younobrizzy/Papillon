@@ -115,7 +115,6 @@
       { input: form.elements.email, label: 'a valid email address', valid: value => EMAIL_RE.test(String(value || '').trim()) },
       { input: form.elements.shippingAddress, label: 'your street address', valid: value => String(value || '').trim().length >= 3 },
       { input: form.elements.city, label: 'your city', valid: value => String(value || '').trim().length >= 2 },
-      { input: form.elements.country, label: 'your country', valid: value => String(value || '').trim().length >= 2 },
       { input: form.elements.preferredPaymentMethod, label: 'your preferred payment method', valid: value => String(value || '').trim().length >= 2 }
     ];
     requiredFields.forEach(({ input }) => input?.addEventListener('input', () => { input.classList.remove('invalid'); showFeedback('', ''); }));
@@ -144,7 +143,6 @@
         city: form.elements.city.value.trim(),
         region: form.elements.region.value.trim(),
         postalCode: form.elements.postalCode.value.trim(),
-        country: form.elements.country.value.trim(),
         preferredPaymentMethod: form.elements.preferredPaymentMethod.value,
         message: form.elements.message.value.trim(),
         website: form.elements.website.value

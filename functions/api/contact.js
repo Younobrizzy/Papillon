@@ -37,14 +37,13 @@ export async function onRequestPost(context) {
   const city = cleanText(body.city, 100);
   const region = cleanText(body.region, 100);
   const postalCode = cleanText(body.postalCode, 30);
-  const country = cleanText(body.country, 100);
   const preferredPaymentMethod = cleanText(body.preferredPaymentMethod, 80);
   if (name.length < 2 || !validEmail(email)) {
     return jsonResponse({ error: 'Please provide your name and a valid email address.' }, 400);
   }
   if (isPuppyContact) {
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(puppySlug) || shippingAddress.length < 3 || city.length < 2 || country.length < 2 || preferredPaymentMethod.length < 2) {
-      return jsonResponse({ error: 'Please complete your shipping address, country, and preferred payment method.' }, 400);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(puppySlug) || shippingAddress.length < 3 || city.length < 2 || preferredPaymentMethod.length < 2) {
+      return jsonResponse({ error: 'Please complete your shipping address and preferred payment method.' }, 400);
     }
   } else if (subject.length < 2 || message.length < 2) {
     return jsonResponse({ error: 'Please provide a subject and a message.' }, 400);
@@ -90,14 +89,14 @@ export async function onRequestPost(context) {
     const composedMessage = isPuppyContact
       ? [
           message ? `Additional notes:\n${message}` : '',
-          `Shipping address: ${[shippingAddress, shippingAddress2, city, region, postalCode, country].filter(Boolean).join(', ')}`,
+          `Shipping address: ${[shippingAddress, shippingAddress2, city, region, postalCode].filter(Boolean).join(', ')}`,
           `Preferred payment method: ${preferredPaymentMethod}`
         ].filter(Boolean).join('\n\n')
       : message;
     const composed = buildContactEmail({
       name, email, subject: isPuppyContact ? `Contact request for ${verifiedPuppyName}` : subject,
       message: composedMessage, puppy: verifiedPuppyName, phone, shippingAddress, shippingAddress2,
-      city, region, postalCode, country, preferredPaymentMethod, puppySlug: isPuppyContact ? puppySlug : ''
+      city, region, postalCode, preferredPaymentMethod, puppySlug: isPuppyContact ? puppySlug : ''
     });
     const messageSubject = `${isPuppyContact ? 'Puppy contact request' : (puppy ? 'Puppy enquiry' : 'Website contact')}: ${isPuppyContact ? verifiedPuppyName : subject}`.slice(0, 220);
     const requestHost = new URL(context.request.url).hostname;

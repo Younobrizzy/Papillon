@@ -4,7 +4,7 @@
 .contact-breadcrumbs a { color:var(--sage-dark, #536756); }
 .puppy-contact-intro { max-width:760px; margin:0 auto 36px; text-align:center; }
 .puppy-contact-intro .eyebrow { justify-content:center; }
-.puppy-contact-intro h1 { margin:0 0 15px; font-size:clamp(38px,5vw,62px); line-height:1.12; }
+.puppy-contact-intro h1 { display:block; width:100%; max-width:none; margin:0 auto 15px; text-align:center; text-wrap:balance; font-size:clamp(38px,5vw,62px); line-height:1.12; }
 .puppy-contact-intro h1 em { color:var(--coral); font-weight:500; }
 .puppy-contact-intro > p:last-child { max-width:650px; margin:0 auto; color:var(--muted); font-size:13px; line-height:1.85; }
 .puppy-contact-grid { display:grid; grid-template-columns:minmax(230px,.72fr) minmax(0,1fr); gap:clamp(24px,5vw,60px); align-items:start; }
@@ -16,6 +16,8 @@
 .contact-puppy-summary-copy p { margin:0 0 10px; color:var(--muted); font-size:11px; }
 .contact-puppy-summary-copy > strong { display:block; margin-bottom:16px; color:var(--sage-dark,#536756); font-size:15px; }
 .puppy-contact-form { min-width:0; }
+.puppy-contact-form .form-field-full { display:flex; width:100%; min-width:0; grid-column:1 / -1; }
+.puppy-contact-form .form-field-full input { width:100%; }
 .form-divider { padding:17px 0 11px; margin:5px 0 16px; border-top:1px solid #eee5da; }
 .form-divider span { color:var(--ink); font-family:var(--heading); font-size:20px; }
 .form-divider p { margin:4px 0 0; color:var(--muted); font-size:10px; line-height:1.7; }

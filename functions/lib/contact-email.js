@@ -39,7 +39,7 @@ function baseTemplate({ eyebrow, title, bodyHtml, footerNote = '' }) {
 </html>`;
 }
 
-export function buildContactEmail({ name, email, subject, message, puppy = '', phone = '', shippingAddress = '', shippingAddress2 = '', city = '', region = '', postalCode = '', country = '', preferredPaymentMethod = '', puppySlug = '' }) {
+export function buildContactEmail({ name, email, subject, message, puppy = '', phone = '', shippingAddress = '', shippingAddress2 = '', city = '', region = '', postalCode = '', preferredPaymentMethod = '', puppySlug = '' }) {
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
   const safeSubject = escapeHtml(subject);
@@ -49,7 +49,7 @@ export function buildContactEmail({ name, email, subject, message, puppy = '', p
       <tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};width:140px;vertical-align:top;">Puppy</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};font-weight:600;">${safePuppy}</td></tr>` : '';
   const extraRows = [
     ['Phone', phone],
-    ['Shipping address', [shippingAddress, shippingAddress2, city, region, postalCode, country].filter(Boolean).join('\n')],
+    ['Shipping address', [shippingAddress, shippingAddress2, city, region, postalCode].filter(Boolean).join('\n')],
     ['Preferred payment method', preferredPaymentMethod],
     ['Listing URL slug', puppySlug]
   ].filter(([, value]) => String(value || '').trim()).map(([label, value]) => `<tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};width:140px;vertical-align:top;">${escapeHtml(label)}</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};overflow-wrap:anywhere;">${escapeHtml(value).replace(/\r?\n/g, '<br>')}</td></tr>`).join('');
@@ -83,7 +83,7 @@ export function buildContactEmail({ name, email, subject, message, puppy = '', p
     `Subject: ${subject}`,
     ...(puppy ? [`Puppy: ${puppy}`] : []),
     ...(phone ? [`Phone: ${phone}`] : []),
-    ...([shippingAddress, shippingAddress2, city, region, postalCode, country].some(Boolean) ? [`Shipping address: ${[shippingAddress, shippingAddress2, city, region, postalCode, country].filter(Boolean).join(', ')}`] : []),
+    ...([shippingAddress, shippingAddress2, city, region, postalCode].some(Boolean) ? [`Shipping address: ${[shippingAddress, shippingAddress2, city, region, postalCode].filter(Boolean).join(', ')}`] : []),
     ...(preferredPaymentMethod ? [`Preferred payment method: ${preferredPaymentMethod}`] : []),
     ...(puppySlug ? [`Listing URL slug: ${puppySlug}`] : []),
     '',
