@@ -665,10 +665,8 @@
     if (wrap) wrap.classList.toggle('is-unlocked', !locked);
     button.classList.toggle('is-unlocked', !locked);
     button.setAttribute('aria-pressed', String(!locked));
-    const label = button.querySelector('.lock-toggle-label');
     const icon = button.querySelector('.lock-toggle-icon');
     const fieldLabel = field.labels && field.labels[0] ? field.labels[0].textContent.trim() : field.name;
-    if (label) label.textContent = locked ? 'Unlock' : 'Lock';
     if (icon) icon.innerHTML = locked ? LOCK_ICON : UNLOCK_ICON;
     button.setAttribute('aria-label', (locked ? 'Unlock ' : 'Lock ') + fieldLabel.toLowerCase());
   }

@@ -192,9 +192,13 @@ h2 { margin-bottom: 0; font-size: clamp(39px, 4.1vw, 56px); }
 .contact-copy > p:not(.eyebrow) { max-width: 410px; margin-bottom: 27px; color: var(--muted); font-size: 13px; line-height: 1.9; }
 .contact-note { display: flex; align-items: center; gap: 13px; padding: 16px; background: var(--paper); }
 .contact-note-icon { display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; background: #f4e1d6; color: var(--coral); font-size: 20px; }
-.contact-note div { display: flex; flex-direction: column; gap: 3px; }
+.contact-note-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .contact-note strong { font-size: 11px; }
 .contact-note span:not(.contact-note-icon) { color: var(--muted); font-size: 10px; line-height: 1.6; }
+.contact-note-phone { margin-top: 7px; }
+.contact-note-phone[hidden] { display: none; }
+.contact-note-phone a { display: inline-block; color: var(--coral-dark); font-size: 13px; font-weight: 700; line-height: 1.4; text-decoration: none; overflow-wrap: anywhere; transition: color .2s ease; }
+.contact-note-phone a:hover { color: var(--ink); text-decoration: underline; }
 .contact-detail { display: flex; align-items: flex-start; gap: 13px; margin-top: 25px; }
 .contact-detail-icon { display: grid; place-items: center; width: 37px; height: 37px; border: 1px solid var(--line); border-radius: 50%; color: var(--coral); }
 .contact-detail > div { display: flex; flex-direction: column; }
