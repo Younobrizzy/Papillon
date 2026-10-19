@@ -72,6 +72,16 @@ for (const alias of ['favicon.ico', 'favicon.svg', 'favicon-16x16.png', 'favicon
   if (!fs.existsSync(path.join(root, target))) errors.push(`Missing organized icon asset: ${target}`);
   if (!redirectRules.includes(`/${alias} /${target} 200`)) errors.push(`Missing root compatibility redirect for /${alias}`);
 }
+const dashboardHtml = fs.readFileSync(path.join(root, 'dashboard/index.html'), 'utf8');
+const dashboardCss = fs.readFileSync(path.join(root, 'assets/css/dashboard.css'), 'utf8');
+const dashboardJs = fs.readFileSync(path.join(root, 'assets/js/dashboard.js'), 'utf8');
+if (!dashboardHtml.includes('id="dashboard-auth-loader"') || !dashboardHtml.includes('id="login-screen" aria-labelledby="login-title" hidden')) {
+  errors.push('Dashboard must start behind the full-screen auth loader to prevent login/dashboard flashes.');
+}
+if (!dashboardCss.includes('.dashboard-auth-loader.is-hidden') || !dashboardJs.includes('AUTH_TRANSITION_MIN_MS') || !dashboardJs.includes('await refreshListings();') || !dashboardJs.includes('await loadPreferencesIntoForm();')) {
+  errors.push('Dashboard auth transition loader or initial-data wait is incomplete.');
+}
+
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const varsExample = fs.readFileSync(path.join(root, '.dev.vars.example'), 'utf8');
 const rules = fs.readFileSync(path.join(root, 'config/firestore.rules'), 'utf8');

@@ -257,3 +257,18 @@
 .preferences-tab-panel[hidden]{display:none!important}
 .preferences-tab-panel .preferences-field-list{width:100%;margin:0}
 @media(max-width:390px){.preferences-tabs{gap:4px;padding:4px}.preferences-tab{flex-basis:0;padding-inline:8px;font-size:11px}}
+
+
+/* Full-screen authentication transition: covers both login and dashboard while auth/data settle. */
+.dashboard-auth-loader{position:fixed;inset:0;z-index:2147483001;display:grid;place-items:center;width:100%;height:100vh;height:100dvh;padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));overflow:hidden;background:var(--db-paper);color:var(--db-ink);opacity:1;visibility:visible;pointer-events:auto;transition:opacity .22s ease,visibility 0s linear .22s}
+.dashboard-auth-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.dashboard-auth-loader-content{width:min(310px,100%);text-align:center}
+.dashboard-auth-spinner{position:relative;display:grid;place-items:center;width:64px;height:64px;margin:0 auto 17px;border:2px solid #eadfd3;border-top-color:var(--db-coral);border-right-color:var(--db-coral);border-radius:50%;animation:dashboard-auth-spin .9s linear infinite}
+.dashboard-auth-loader-mark{display:grid;place-items:center;width:36px;height:36px;overflow:hidden;animation:dashboard-auth-counterspin .9s linear infinite}
+.dashboard-auth-loader-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.dashboard-auth-loader-brand{margin:0;color:var(--db-ink);font-family:'Playfair Display',Georgia,serif;font-size:23px;font-weight:700;letter-spacing:-.045em;line-height:1.2}
+.dashboard-auth-loader-brand i{color:var(--db-coral);font-weight:500}
+.dashboard-auth-loader-message{margin:8px 0 0;color:var(--db-muted);font-size:12px;letter-spacing:.015em}
+@keyframes dashboard-auth-spin{to{transform:rotate(360deg)}}
+@keyframes dashboard-auth-counterspin{to{transform:rotate(-360deg)}}
+@media(prefers-reduced-motion:reduce){.dashboard-auth-loader{transition-duration:.01ms}.dashboard-auth-spinner,.dashboard-auth-loader-mark{animation-duration:1.8s}}

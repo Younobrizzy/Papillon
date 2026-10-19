@@ -14,6 +14,8 @@
   const passwordInput = $('#login-password');
   const passwordToggle = $('#password-toggle');
   const app = $('#dashboard-app');
+  const authLoader = $('#dashboard-auth-loader');
+  const authLoaderMessage = $('#dashboard-auth-loader-message');
   const sidebar = $('#dashboard-sidebar');
   const menuToggle = $('#mobile-menu-toggle');
   const sidebarBackdrop = $('#sidebar-backdrop');
@@ -41,7 +43,43 @@
   let signOut = null;
   let isSubmittingLogin = false;
   let activePreferenceTab = 'site';
+  const AUTH_TRANSITION_MIN_MS = 420;
+  let authTransitionStartedAt = Date.now();
+  let authTransitionToken = 0;
 
+  function startAuthTransition(message) {
+    authTransitionToken += 1;
+    authTransitionStartedAt = Date.now();
+    if (authLoader) {
+      authLoader.classList.remove('is-hidden');
+      authLoader.setAttribute('aria-hidden', 'false');
+      authLoader.setAttribute('aria-busy', 'true');
+    }
+    if (authLoaderMessage && message) authLoaderMessage.textContent = message;
+    document.body.setAttribute('aria-busy', 'true');
+    return authTransitionToken;
+  }
+
+  function ensureAuthTransition(message) {
+    const loaderIsHidden = !authLoader || authLoader.classList.contains('is-hidden');
+    if (loaderIsHidden) return startAuthTransition(message);
+    if (authLoaderMessage && message) authLoaderMessage.textContent = message;
+    document.body.setAttribute('aria-busy', 'true');
+    return authTransitionToken;
+  }
+
+  async function finishAuthTransition(token) {
+    const expectedToken = token === undefined ? authTransitionToken : token;
+    const remaining = Math.max(0, AUTH_TRANSITION_MIN_MS - (Date.now() - authTransitionStartedAt));
+    if (remaining) await new Promise(resolve => window.setTimeout(resolve, remaining));
+    if (expectedToken !== authTransitionToken) return;
+    if (authLoader) {
+      authLoader.classList.add('is-hidden');
+      authLoader.setAttribute('aria-hidden', 'true');
+      authLoader.setAttribute('aria-busy', 'false');
+    }
+    document.body.removeAttribute('aria-busy');
+  }
 
   async function apiFetch(url, init = {}) {
     const headers = new Headers(init.headers || {});
@@ -152,23 +190,42 @@
   }
 
   function showLogin() {
+    const transitionToken = ensureAuthTransition('Preparing sign-in…');
     setLoginLoading(false);
     if (loginScreen) loginScreen.hidden = false;
     if (app) app.hidden = true;
     closeMobileSidebar();
     document.body.classList.remove('dialog-open');
+    void finishAuthTransition(transitionToken);
   }
 
   async function showApp() {
     const session = getSession();
-    if (!session || !session.loggedIn) return showLogin();
+    if (!session || !session.loggedIn) {
+      showLogin();
+      return;
+    }
+
+    const transitionToken = startAuthTransition('Getting your dashboard ready…');
     currentEmail = session.email;
-    loginScreen.hidden = true;
-    app.hidden = false;
+    if (loginScreen) loginScreen.hidden = true;
+    if (app) app.hidden = true;
     if (userEmail) userEmail.textContent = currentEmail;
     showView('listings');
-    await refreshListings();
-    await loadPreferencesIntoForm();
+
+    try {
+      // Keep the dashboard covered until its first data requests complete, so
+      // visitors never see an empty frame or a layout jump between login and app.
+      await refreshListings();
+      await loadPreferencesIntoForm();
+    } catch (error) {
+      console.error('Dashboard initial loading failed:', error);
+    } finally {
+      if (transitionToken === authTransitionToken) {
+        if (app) app.hidden = false;
+        await finishAuthTransition(transitionToken);
+      }
+    }
   }
 
   function closeMobileSidebar() {
@@ -962,7 +1019,7 @@
       localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedIn: true, email: result.email || credential.user.email }));
       passwordInput.value = '';
       currentEmail = result.email || credential.user.email || '';
-      showApp();
+      await showApp();
       showToast('Signed in with Firebase.');
     } catch (error) {
       const code = String(error?.code || '');
@@ -1036,9 +1093,12 @@
     if (action) action();
   });
   $('#logout-button').addEventListener('click', () => openConfirmation({
-    title: 'Log out of the dashboard?', message: 'You will be signed out and returned to the sign-in screen.', acceptText: 'Log out', action: () => {
-      if (auth && signOut) signOut(auth).catch(() => {});
-      localStorage.removeItem(SESSION_KEY); showLogin(); showToast('You have logged out.');
+    title: 'Log out of the dashboard?', message: 'You will be signed out and returned to the sign-in screen.', acceptText: 'Log out', action: async () => {
+      startAuthTransition('Signing you out…');
+      if (auth && signOut) await signOut(auth).catch(() => {});
+      localStorage.removeItem(SESSION_KEY);
+      showLogin();
+      showToast('You have logged out.');
     }
   }));
   $('#remove-cover-image').addEventListener('click', function () {
@@ -1081,7 +1141,7 @@
           }
           currentEmail = result.email || user.email || user.uid || '';
           localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedIn: true, email: currentEmail }));
-          showApp();
+          await showApp();
         } catch (error) {
           localStorage.removeItem(SESSION_KEY);
           showLogin();
