@@ -245,3 +245,15 @@
 }
 @media(max-width:380px){.login-screen>.login-panel{padding-top:max(20px,env(safe-area-inset-top))}}
 @media(max-height:680px) and (max-width:900px){.login-screen>.login-panel{padding-top:max(16px,env(safe-area-inset-top))}}
+
+
+/* Preferences use an accessible in-page tab bar to separate site details and SMTP setup. */
+.preferences-tabs{display:flex;align-items:stretch;gap:6px;width:100%;margin:0 0 22px;padding:5px;border:1px solid var(--db-line);border-radius:9px;background:#f6f1ea}
+.preferences-tab{appearance:none;display:flex;align-items:center;justify-content:center;flex:1 1 150px;min-width:0;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:6px;background:transparent;color:#697166;font:inherit;font-size:12px;font-weight:800;text-align:center;cursor:pointer;transition:background .18s,border-color .18s,color .18s,box-shadow .18s}
+.preferences-tab:hover{background:rgba(255,255,255,.55);color:var(--db-ink)}
+.preferences-tab.is-active{border-color:#e6ddd1;background:var(--db-white);color:var(--db-ink);box-shadow:0 2px 8px rgba(38,55,46,.06)}
+.preferences-tab:focus-visible{outline:2px solid var(--db-coral);outline-offset:2px}
+.preferences-tab-panel{min-width:0}
+.preferences-tab-panel[hidden]{display:none!important}
+.preferences-tab-panel .preferences-field-list{width:100%;margin:0}
+@media(max-width:390px){.preferences-tabs{gap:4px;padding:4px}.preferences-tab{flex-basis:0;padding-inline:8px;font-size:11px}}

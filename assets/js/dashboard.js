@@ -40,6 +40,7 @@
   let onAuthStateChanged = null;
   let signOut = null;
   let isSubmittingLogin = false;
+  let activePreferenceTab = 'site';
 
 
   async function apiFetch(url, init = {}) {
@@ -193,6 +194,24 @@
     });
     topbarTitle.textContent = isPreferences ? 'Preferences' : isEditor ? ($('#listing-original-slug').value ? 'Edit listing' : 'New listing') : 'Listings';
     closeMobileSidebar();
+  }
+
+  function setPreferenceTab(tabName) {
+    activePreferenceTab = tabName === 'smtp' ? 'smtp' : 'site';
+    $$('[data-preference-tab]').forEach(tab => {
+      const active = tab.dataset.preferenceTab === activePreferenceTab;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    $$('[data-preference-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.preferencePanel !== activePreferenceTab;
+    });
+    const saveButton = $('#preferences-save-button');
+    if (saveButton) {
+      const label = activePreferenceTab === 'smtp' ? 'Save SMTP settings' : 'Save preferences';
+      saveButton.innerHTML = label + ' <span aria-hidden="true">↗</span>';
+    }
   }
 
   function makeStatusPill(status) {
@@ -607,7 +626,6 @@
     };
     const existingIndex = listings.findIndex(entry => entry.slug === originalSlug);
     const saveButton = $('#save-listing-button');
-    const originalButtonText = saveButton ? saveButton.innerHTML : '';
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
     try {
       await savePuppyListing(item);
@@ -618,7 +636,8 @@
       listingFormError.textContent = error.message || 'Unable to save the listing. Please try again.';
       listingFormError.hidden = false;
     } finally {
-      if (saveButton) { saveButton.disabled = false; saveButton.innerHTML = originalButtonText; }
+      if (saveButton) saveButton.disabled = false;
+      setPreferenceTab(activePreferenceTab);
     }
   }
 
@@ -964,6 +983,25 @@
       setLoginLoading(false);
     }
   });
+
+  $$('[data-preference-tab]').forEach(tab => {
+    tab.addEventListener('click', () => setPreferenceTab(tab.dataset.preferenceTab));
+    tab.addEventListener('keydown', event => {
+      const order = ['site', 'smtp'];
+      const current = order.indexOf(tab.dataset.preferenceTab);
+      let next = current;
+      if (event.key === 'ArrowRight') next = (current + 1) % order.length;
+      else if (event.key === 'ArrowLeft') next = (current - 1 + order.length) % order.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = order.length - 1;
+      else return;
+      event.preventDefault();
+      setPreferenceTab(order[next]);
+      const target = $('[data-preference-tab="' + order[next] + '"]');
+      if (target) target.focus();
+    });
+  });
+  setPreferenceTab('site');
 
   $$('.sidebar-nav-link[data-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
   if (menuToggle) menuToggle.addEventListener('click', function () {

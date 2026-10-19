@@ -84,8 +84,22 @@ try {
 const dashboardHtml = await (await import('node:fs/promises')).readFile(new URL('../dashboard/index.html', import.meta.url), 'utf8');
 const dashboardScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/dashboard.js', import.meta.url), 'utf8');
 const preferencesApi = await (await import('node:fs/promises')).readFile(new URL('../functions/api/preferences.js', import.meta.url), 'utf8');
+assert.match(dashboardHtml, /role="tablist"[^>]*aria-label="Preference categories"/, 'preferences must have an accessible tab list');
+assert.match(dashboardHtml, /data-preference-tab="site"/, 'site details tab should exist');
+assert.match(dashboardHtml, /data-preference-tab="smtp"/, 'SMTP setup should have its own tab');
+assert.match(dashboardHtml, /id="preferences-panel-smtp"[^>]*data-preference-panel="smtp" hidden/, 'SMTP fields must be grouped in a separate, initially hidden panel');
+assert.match(dashboardHtml, /id="preference-smtp-host"/, 'SMTP host field should remain available in the SMTP tab');
+assert.match(dashboardHtml, /id="preferences-save-button"/, 'preferences form must retain a save action for the selected tab');
 assert.doesNotMatch(dashboardHtml, /firestore/i, 'dashboard HTML copy should not mention the storage backend');
 assert.doesNotMatch(dashboardScript, /firestore/i, 'dashboard script should not expose the storage backend in UI copy or labels');
 assert.doesNotMatch(preferencesApi, /message:\s*['"]Preferences saved to Firestore/i, 'preferences success feedback should not mention the storage backend');
 
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, and Firebase-authenticated dashboard access without an admins document.');
+
+const publicScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/script.js', import.meta.url), 'utf8');
+const publicStyles = await (await import('node:fs/promises')).readFile(new URL('../assets/css/styles.css', import.meta.url), 'utf8');
+assert.match(publicScript, /function renderEmptyPuppyState\(\)/, 'homepage should have a dedicated empty-listing state renderer');
+assert.match(publicScript, /heading\.textContent = 'No puppy listings yet'/, 'empty listing state should use the requested heading');
+assert.match(publicScript, /if \(!publicPuppies\.length\)\s*\{\s*renderEmptyPuppyState\(\);/, 'empty listing response should render the dedicated state');
+assert.match(publicStyles, /\.puppy-empty-state\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/s, 'empty state should span the full puppy grid width');
+
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, and the public no-listings state.');

@@ -33,7 +33,7 @@ The root folder intentionally keeps the entry-point files and Cloudflare Pages c
 - One main JPEG photo per listing and up to eight gallery photos, each independently compressed to no more than **240 KiB (245,760 bytes)** before save and checked again by the server.
 - Clean puppy URLs such as `/little-puppy`; every listing uses the shared `puppy.html` template.
 - Landing-page pagination with six puppy cards per page, responsive page buttons, previous/next controls, ellipses, and a result count. This is client-side display pagination: `/api/puppies` returns the current public listing set in one request.
-- Public contact phone number loaded into the initial HTML, displayed at the top of the homepage and puppy enquiry forms, and linked using `tel:`.
+- Public contact phone number loaded into the initial HTML, shown in its own labeled phone card on the homepage and on puppy enquiry forms, and linked using `tel:`.
 - Public live-chat / site script field. The saved snippet is executed only on the homepage, puppy profile pages, and shipping page; it is not loaded on the dashboard or 404 page.
 - Server-rendered title, description, canonical, Open Graph, and Twitter metadata for the homepage, shipping page, and puppy slug routes. This gives link preview crawlers the listing details before client JavaScript executes.
 - Site-wide title, brand name, description, and optional custom social preview image editable in Preferences.
@@ -261,7 +261,7 @@ After deploy, test `GET /api/puppies`. With valid Firestore settings and no list
 
 ## Puppy listings and images
 
-No dummy/demo listing records are included. All listing content comes from Firestore. Use the dashboard to create, edit, and remove listings.
+No dummy/demo listing records are included. All listing content comes from Firestore. When there are no listings, the homepage displays a dedicated “No puppy listings yet” state; loading/API failures use a separate temporary-unavailable message. Use the dashboard to create, edit, and remove listings.
 
 ### Firestore data layout
 
@@ -304,7 +304,7 @@ The actual optional custom social image is stored separately in Firestore docume
 
 ### Public phone number
 
-Enter a display-friendly phone number such as `+237 6XX XXX XXX` in Preferences. The backend accepts a formatted number with 7–20 digits. On the homepage and puppy profile route, Cloudflare middleware injects the phone number into the initial HTML when configured, so it can show before the frontend JavaScript finishes. The link uses a normalized `tel:` destination. Leaving it blank hides the banner. The public scripts endpoint also returns the phone number as a fallback for client-side display.
+Enter a display-friendly phone number such as `+237 6XX XXX XXX` in Preferences. The backend accepts a formatted number with 7–20 digits. On the homepage and puppy profile route, Cloudflare middleware injects the phone number into the initial HTML when configured, so it can show before the frontend JavaScript finishes. On the homepage it appears in its own phone card with a phone icon and a “Call us” label; the card stays hidden if no number is configured. The link uses a normalized `tel:` destination. Leaving it blank hides the banner. The public scripts endpoint also returns the phone number as a fallback for client-side display.
 
 ### Public site script / live chat
 

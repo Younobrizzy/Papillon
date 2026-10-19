@@ -91,6 +91,30 @@
     if (puppyPagination) puppyPagination.hidden = true;
   }
 
+  function renderEmptyPuppyState() {
+    if (!puppyGrid) return;
+    puppyGrid.replaceChildren();
+
+    const state = document.createElement('div');
+    state.className = 'puppy-empty-state';
+    state.setAttribute('role', 'status');
+
+    const icon = document.createElement('span');
+    icon.className = 'puppy-empty-state-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '✿';
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'No puppy listings yet';
+
+    const message = document.createElement('p');
+    message.textContent = 'Please check back soon to meet our available puppies.';
+
+    state.append(icon, heading, message);
+    puppyGrid.appendChild(state);
+    if (puppyPagination) puppyPagination.hidden = true;
+  }
+
   function getPageItems(currentPage, totalPages) {
     // Keep the control bar from overflowing narrow phones while showing the
     // usual nearby page numbers on wider screens.
@@ -168,7 +192,7 @@
     if (!puppyGrid) return;
     puppyGrid.replaceChildren();
     if (!publicPuppies.length) {
-      setListingMessage('No puppy listings are available right now. Please check back soon.');
+      renderEmptyPuppyState();
       return;
     }
 

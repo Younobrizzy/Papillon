@@ -26,9 +26,9 @@
   <link rel="mask-icon" href="/assets/icons/favicon.svg?v=20261017b" color="#D66E55" />
   <link rel="manifest" href="/assets/icons/site.webmanifest?v=20261017b" />
   <link rel="stylesheet" href="/assets/css/navigation-loading.css" />
-  <link rel="stylesheet" href="/assets/css/dashboard.css?v=20261019-lock-icons" />
+  <link rel="stylesheet" href="/assets/css/dashboard.css?v=20261019-smtp-tabs" />
   <script src="/assets/js/navigation-loading.js" defer></script>
-  <script type="module" src="/assets/js/dashboard.js?v=20261019-lock-icons"></script>
+  <script type="module" src="/assets/js/dashboard.js?v=20261019-smtp-tabs"></script>
 </head>
 <body class="dashboard-page">
   <section class="login-screen" id="login-screen" aria-labelledby="login-title">
@@ -168,7 +168,13 @@
         <section class="dashboard-view preferences-view" id="preferences-view" aria-labelledby="preferences-title" hidden>
           <div class="page-heading"><div><p class="eyebrow">SITE SETUP</p><h1 id="preferences-title">Preferen<em>ces.</em></h1><p class="page-description">Manage your site preferences and outgoing email settings.</p></div></div>
           <form class="preferences-form" id="preferences-form" novalidate>
-            <div class="preferences-field-list">
+            
+            <div class="preferences-tabs" role="tablist" aria-label="Preference categories">
+              <button class="preferences-tab is-active" type="button" id="preferences-tab-site" role="tab" aria-selected="true" aria-controls="preferences-panel-site" data-preference-tab="site" tabindex="0">Site details</button>
+              <button class="preferences-tab" type="button" id="preferences-tab-smtp" role="tab" aria-selected="false" aria-controls="preferences-panel-smtp" data-preference-tab="smtp" tabindex="-1">SMTP setup</button>
+            </div>
+            <section class="preferences-tab-panel" id="preferences-panel-site" role="tabpanel" aria-labelledby="preferences-tab-site" data-preference-panel="site">
+              <div class="preferences-field-list">
               <div class="dashboard-field locked-field field-full">
                 <div class="field-label-row"><label for="preference-email">Contact email</label></div>
                 <div class="field-lockable-control">
@@ -224,7 +230,10 @@
                   <button class="field-lock-toggle" type="button" data-lock-target="preference-script" aria-label="Unlock script" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span></button>
                 </div>
               </div>
-              <div class="preferences-subheading"><span class="preferences-subheading-mark" aria-hidden="true">✉</span><div><h2>SMTP setup</h2></div></div>
+              </div>
+            </section>
+            <section class="preferences-tab-panel" id="preferences-panel-smtp" role="tabpanel" aria-labelledby="preferences-tab-smtp" data-preference-panel="smtp" hidden>
+              <div class="preferences-field-list">
               <div class="dashboard-field locked-field">
                 <div class="field-label-row"><label for="preference-smtp-host">SMTP host</label></div>
                 <div class="field-lockable-control">
@@ -253,8 +262,9 @@
                   <button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-password" aria-label="Unlock SMTP password" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span></button>
                 </div>
               </div>
-            </div>
-            <div class="form-actions"><button class="primary-button" type="submit">Save preferences <span aria-hidden="true">↗</span></button><p class="form-feedback" id="preferences-feedback" role="status" aria-live="polite"></p></div>
+              </div>
+            </section>
+            <div class="form-actions"><button class="primary-button" id="preferences-save-button" type="submit">Save preferences <span aria-hidden="true">↗</span></button><p class="form-feedback" id="preferences-feedback" role="status" aria-live="polite"></p></div>
           </form>
         </section>
       </main>
