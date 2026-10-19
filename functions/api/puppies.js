@@ -1,4 +1,5 @@
 import { cleanText, jsonResponse, readFirebaseSession, sameOriginRequest } from '../lib/admin-session.js';
+import { getFirebaseSigningKey } from '../lib/firebase-key.js';
 
 const MAX_IMAGE_BYTES = 240 * 1024;
 const MAX_GALLERY_IMAGES = 8;
@@ -7,8 +8,6 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const encoder = new TextEncoder();
 let cachedAccessToken = '';
 let cachedAccessTokenExpiry = 0;
-let importedSigningKey = null;
-let signingKeyFingerprint = '';
 
 function base64UrlEncode(value) {
   const bytes = typeof value === 'string' ? encoder.encode(value) : value;
@@ -40,28 +39,6 @@ function missingServiceConfig(env) {
   return !firebaseProjectId(env) || !String(env.FIREBASE_CLIENT_EMAIL || '').trim() || !String(env.FIREBASE_PRIVATE_KEY || '').trim();
 }
 
-async function getSigningKey(env) {
-  const pem = String(env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim();
-  if (!pem || !pem.includes('BEGIN PRIVATE KEY')) throw new Error('FIREBASE_PRIVATE_KEY must contain a PKCS#8 private key PEM.');
-  const fingerprint = `${String(env.FIREBASE_CLIENT_EMAIL || '').trim()}|${pem.slice(0, 48)}|${pem.length}`;
-  if (importedSigningKey && signingKeyFingerprint === fingerprint) return importedSigningKey;
-  const base64 = pem.replace(/-----BEGIN PRIVATE KEY-----/g, '').replace(/-----END PRIVATE KEY-----/g, '').replace(/\s+/g, '');
-  let der;
-  try {
-    der = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-  } catch {
-    throw new Error('FIREBASE_PRIVATE_KEY is not valid base64-encoded PEM content.');
-  }
-  importedSigningKey = await crypto.subtle.importKey(
-    'pkcs8', der,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  signingKeyFingerprint = fingerprint;
-  return importedSigningKey;
-}
-
 async function getAccessToken(env) {
   if (cachedAccessToken && cachedAccessTokenExpiry > Date.now() + 60_000) return cachedAccessToken;
   const clientEmail = String(env.FIREBASE_CLIENT_EMAIL || '').trim();
@@ -80,7 +57,7 @@ async function getAccessToken(env) {
     exp: now + 3600
   }));
   const unsigned = `${header}.${claims}`;
-  const key = await getSigningKey(env);
+  const key = await getFirebaseSigningKey(env);
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(unsigned));
   const assertion = `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
   const response = await fetch(GOOGLE_TOKEN_URL, {

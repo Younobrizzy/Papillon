@@ -1,6 +1,30 @@
 import assert from 'node:assert/strict';
 import { encryptSecret, decryptSecret } from '../functions/lib/crypto.js';
 import { readFirebaseSession } from '../functions/lib/admin-session.js';
+import { generateKeyPairSync } from 'node:crypto';
+import { getFirebaseSigningKey } from '../functions/lib/firebase-key.js';
+
+// Firebase service-account key parsing accepts common Cloudflare secret formats.
+const { privateKey: generatedPrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const validPem = generatedPrivateKey.export({ type: 'pkcs8', format: 'pem' });
+const keyVariants = [
+  validPem,
+  validPem.replace(/\n/g, '\\n'),
+  JSON.stringify(validPem),
+  JSON.stringify({ type: 'service_account', client_email: 'smoke-test@example.iam.gserviceaccount.com', private_key: validPem })
+];
+for (const keyValue of keyVariants) {
+  const signingKey = await getFirebaseSigningKey({
+    FIREBASE_CLIENT_EMAIL: 'smoke-test@example.iam.gserviceaccount.com',
+    FIREBASE_PRIVATE_KEY: keyValue
+  });
+  assert.ok(signingKey, 'a valid service-account private key format should import');
+}
+await assert.rejects(
+  () => getFirebaseSigningKey({ FIREBASE_CLIENT_EMAIL: 'smoke-test@example.iam.gserviceaccount.com', FIREBASE_PRIVATE_KEY: 'not-a-private-key' }),
+  /complete PKCS#8 private_key PEM/,
+  'malformed private key values should return a clear configuration error'
+);
 
 const env = { SMTP_ENCRYPTION_KEY: 'local-test-key-do-not-use-in-production-2026' };
 const secret = 'smtp-password-for-test-only';
@@ -55,4 +79,4 @@ try {
   globalThis.fetch = originalFetch;
 }
 
-console.log('Smoke tests passed: SMTP encryption/decryption, key validation, and Firebase-authenticated dashboard access without an admins document.');
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, and Firebase-authenticated dashboard access without an admins document.');

@@ -8,14 +8,14 @@ Use this checklist with `README.md` before making the site public.
 - [ ] Enable **Authentication → Email/Password**.
 - [ ] Create the Firebase Authentication accounts that should be able to sign in to the dashboard. No `admins` collection or per-user allowlist document is required.
 - [ ] Deploy `config/firestore.rules`. The rules intentionally deny all browser SDK reads/writes; server-side service-account calls use Google Cloud IAM.
-- [ ] Create/use a dedicated service account with the required Firestore data access. Keep its JSON key private.
+- [ ] Create/use a dedicated service account and grant it the Google Cloud IAM role **Cloud Datastore User** (`roles/datastore.user`) on the same project so it can access Firestore data. Keep its JSON key private.
 
 ## B. Cloudflare Pages
 
 - [ ] Deploy the extracted project directory as the Pages project root. `index.html`, `functions/`, `assets/`, and `_redirects` must be at the root. Do not include `wrangler.toml`; the Cloudflare Dashboard is intended to manage ordinary Variables.
 - [ ] Confirm there is no `wrangler.toml` in the deployed project; redeploy after removing it if the project was previously Wrangler-configured, so dashboard-managed regular Variables can be edited.
 - [ ] Add these as Cloudflare **Variables**: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, and `FIREBASE_APP_ID`.
-- [ ] Add these as Cloudflare **Secrets**: `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` from the service-account JSON.
+- [ ] Add these as Cloudflare **Secrets**: `FIREBASE_CLIENT_EMAIL` (`client_email`) and `FIREBASE_PRIVATE_KEY` (`private_key`, the full PEM including BEGIN/END lines) from the same service-account JSON. The key parser accepts real or escaped newlines and reports malformed values clearly.
 - [ ] Generate a stable `SMTP_ENCRYPTION_KEY` (for example, `openssl rand -base64 32`) and add it as a Cloudflare **Secret**. Do not change it after saving SMTP settings unless you plan to re-save the SMTP password.
 - [ ] For local development, copy `.dev.vars.example` to `.dev.vars` and enter the same values there; never commit `.dev.vars`.
 - [ ] Do **not** create a `PAPILLON_STORE` KV binding. The updated project uses Firestore for private Preferences and contact rate limits.

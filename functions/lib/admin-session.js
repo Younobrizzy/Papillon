@@ -1,9 +1,9 @@
+import { getFirebaseSigningKey } from './firebase-key.js';
+
 const encoder = new TextEncoder();
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 let cachedGoogleToken = '';
 let cachedGoogleTokenExpiry = 0;
-let cachedSigningKey = null;
-let cachedSigningFingerprint = '';
 
 function base64UrlEncode(value) {
   const bytes = typeof value === 'string' ? encoder.encode(value) : value;
@@ -33,20 +33,6 @@ async function verifyFirebaseIdToken(idToken, env) {
   return { uid: String(user.localId), email: String(user.email || '').trim().toLowerCase() };
 }
 
-async function getServiceAccountKey(env) {
-  const clientEmail = String(env.FIREBASE_CLIENT_EMAIL || '').trim();
-  const pem = String(env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim();
-  if (!clientEmail || !pem) throw new Error('Firestore service-account credentials are not configured.');
-  if (!pem.includes('BEGIN PRIVATE KEY')) throw new Error('FIREBASE_PRIVATE_KEY must contain a PKCS#8 private key PEM.');
-  const fingerprint = `${clientEmail}|${pem.slice(0, 48)}|${pem.length}`;
-  if (cachedSigningKey && cachedSigningFingerprint === fingerprint) return cachedSigningKey;
-  const base64 = pem.replace(/-----BEGIN PRIVATE KEY-----/g, '').replace(/-----END PRIVATE KEY-----/g, '').replace(/\s+/g, '');
-  const der = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-  cachedSigningKey = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-  cachedSigningFingerprint = fingerprint;
-  return cachedSigningKey;
-}
-
 export async function getFirestoreAccessToken(env) {
   if (cachedGoogleToken && cachedGoogleTokenExpiry > Date.now() + 60_000) return cachedGoogleToken;
   const projectId = String(env.FIREBASE_PROJECT_ID || '').trim();
@@ -56,7 +42,7 @@ export async function getFirestoreAccessToken(env) {
   const header = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64UrlEncode(JSON.stringify({ iss: clientEmail, scope: 'https://www.googleapis.com/auth/datastore', aud: GOOGLE_TOKEN_URL, iat: now, exp: now + 3600 }));
   const unsigned = `${header}.${claims}`;
-  const key = await getServiceAccountKey(env);
+  const key = await getFirebaseSigningKey(env);
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(unsigned));
   const assertion = `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
   const response = await fetch(GOOGLE_TOKEN_URL, {
