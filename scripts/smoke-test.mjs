@@ -176,6 +176,16 @@ assert.match(publicScript, /function renderEmptyPuppyState\(\)/, 'homepage shoul
 assert.match(publicScript, /heading\.textContent = 'No puppy listings yet'/, 'empty listing state should use the requested heading');
 assert.match(publicScript, /if \(!publicPuppies\.length\)\s*\{\s*renderEmptyPuppyState\(\);/, 'empty listing response should render the dedicated state');
 assert.match(publicStyles, /\.puppy-empty-state\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/s, 'empty state should span the full puppy grid width');
+assert.match(publicScript, /function createPuppySkeletonCard\(\)/, 'homepage should build skeleton cards while listing data loads');
+assert.match(publicScript, /renderPuppySkeletons\(\)/, 'homepage should render skeleton cards before fetching listings');
+assert.match(publicStyles, /@keyframes papillon-skeleton-shimmer/, 'public cards should have a shimmer animation');
+assert.match(publicStyles, /\.puppy-image-wrap\.is-loading::before/, 'listing card images should shimmer until the image is loaded');
+const puppyDetailStyles = await (await import('node:fs/promises')).readFile(new URL('../assets/css/puppy-detail.css', import.meta.url), 'utf8');
+assert.match(puppyDetailStyles, /\.profile-gallery-thumbnails \{[^}]*display: flex;[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;[^}]*scrollbar-width: none;/, 'profile thumbnails should form a horizontal non-wrapping rail with hidden scrollbar');
+assert.match(puppyDetailStyles, /\.gallery-thumbnail \{[^}]*aspect-ratio: 1 \/ 1;/, 'profile gallery thumbnails should be square');
+assert.match(puppyDetailStyles, /\.gallery-thumbnail\.is-loading::before/, 'gallery thumbnails should shimmer while their images load');
+assert.match(puppyContactJs, /Array\.isArray\(puppy\.gallery\)[\s\S]*imageWrap\.classList\.add\('is-loading'\)/, 'selected puppy card should fall back to gallery imagery and shimmer while loading');
+assert.match(puppyContactCss, /\.contact-puppy-image-wrap \{[^}]*aspect-ratio:4\/4\.3;/, 'selected puppy card should have an image frame with a stable aspect ratio');
 
 const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../functions/api/puppies.js', import.meta.url), 'utf8');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');

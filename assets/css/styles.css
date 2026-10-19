@@ -491,3 +491,35 @@ h2 { margin-bottom: 0; font-size: clamp(39px, 4.1vw, 56px); }
 @media (prefers-reduced-motion: reduce) {
   .puppy-pagination-arrow, .puppy-pagination-number { transition: none; }
 }
+
+/* Accessible shimmer states for dynamically loaded puppy cards and card imagery. */
+@keyframes papillon-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.skeleton-shimmer,
+.skeleton-block,
+.puppy-image-wrap.is-loading::before {
+  background: linear-gradient(105deg, #eee8de 8%, #f8f4ee 18%, #eee8de 33%);
+  background-size: 220% 100%;
+  animation: papillon-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+.puppy-card-skeleton { pointer-events: none; transform: none !important; box-shadow: none !important; }
+.puppy-card-skeleton .puppy-card-link { cursor: default; }
+.puppy-card-skeleton .puppy-card-body { display: flex; flex-direction: column; gap: 16px; }
+.skeleton-block { display: block; flex: 0 0 auto; border-radius: 4px; }
+.skeleton-title { width: 58%; height: 25px; }
+.puppy-skeleton-meta { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.skeleton-age { width: 34%; height: 11px; }
+.skeleton-price { width: 27%; height: 20px; }
+.puppy-image-wrap.is-loading { isolation: isolate; }
+.puppy-image-wrap.is-loading::before { position: absolute; z-index: 1; inset: 0; content: ''; pointer-events: none; }
+.puppy-image-wrap.is-loading > img { opacity: 0; }
+.puppy-image-wrap.is-loaded > img { opacity: 1; transition: opacity .22s ease; }
+.puppy-image-wrap.image-unavailable::before { background: linear-gradient(135deg, #f1ece4, #e8e1d6); }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer,
+  .skeleton-block,
+  .puppy-image-wrap.is-loading::before { animation: none; }
+  .puppy-image-wrap.is-loaded > img { transition: none; }
+}

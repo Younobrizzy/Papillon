@@ -136,6 +136,7 @@
     galleryIndex = wrapGalleryIndex(index);
     const item = galleryItems[galleryIndex];
     if (galleryMainImage) {
+      if (galleryStage) galleryStage.classList.add('is-loading');
       galleryMainImage.src = item.src;
       galleryMainImage.alt = item.alt;
       galleryMainImage.loading = galleryIndex === 0 ? 'eager' : 'lazy';
@@ -194,22 +195,27 @@
       galleryItems.forEach(function (item, index) {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'gallery-thumbnail';
+        button.className = 'gallery-thumbnail is-loading';
         button.setAttribute('aria-label', 'Show photo ' + (index + 1) + ': ' + item.alt);
         button.setAttribute('aria-pressed', 'false');
         const thumb = document.createElement('img');
-        thumb.src = item.src;
         thumb.alt = '';
         thumb.loading = 'lazy';
         thumb.decoding = 'async';
         thumb.draggable = false;
+        thumb.addEventListener('load', function () {
+          button.classList.remove('is-loading');
+          button.classList.add('is-loaded');
+        }, { once: true });
         thumb.addEventListener('error', function () {
+          button.classList.remove('is-loading');
           button.classList.add('gallery-thumbnail-unavailable');
           button.setAttribute('aria-label', 'Photo ' + (index + 1) + ' unavailable');
         }, { once: true });
         button.appendChild(thumb);
         button.addEventListener('click', function () { setGalleryImage(index, true); });
         galleryThumbnails.appendChild(button);
+        thumb.src = item.src;
       });
     }
 
@@ -300,12 +306,18 @@
     putText('puppy-long-description', puppy.story);
 
     if (galleryMainImage) {
+      galleryMainImage.addEventListener('load', function () {
+        galleryMainImage.style.visibility = 'visible';
+        const frame = galleryMainImage.closest('.profile-photo-frame');
+        if (frame) frame.classList.remove('is-loading', 'profile-photo-unavailable');
+      });
       galleryMainImage.addEventListener('error', function () {
         galleryMainImage.alt = 'Puppy photo is currently unavailable';
         galleryMainImage.style.visibility = 'hidden';
         const frame = galleryMainImage.closest('.profile-photo-frame');
+        if (frame) frame.classList.remove('is-loading');
         if (frame) frame.classList.add('profile-photo-unavailable');
-      }, { once: true });
+      });
     }
     buildGallery(puppy.gallery || [{ src: puppy.image, alt: puppy.imageAlt }]);
     const mainImageLoaded = await waitForImageReady(galleryMainImage, 12000);

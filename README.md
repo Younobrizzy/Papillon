@@ -484,6 +484,12 @@ The header/footer logo uses SVG lockups in `assets/images/brand/`. The butterfly
 
 Decorative hero/about photos and their crop versions live under `assets/images/sections/`; they are not puppy listing records and do not populate the Firestore `puppies` collection. Listing cards and profile galleries use images saved with the actual listing in Firestore. Decorative cover images use `object-fit: cover` where appropriate, while the full-screen gallery preview preserves the selected image.
 
+### Loading states and puppy photo gallery
+
+- The homepage renders six full-card shimmer placeholders while public puppy listings load; each listing photo keeps a shimmer until its image is ready.
+- The selected-puppy panel on `/contact/{listing-slug}` keeps a stable image frame, tries the main listing image and gallery photos, and shows a branded placeholder if no image loads.
+- Puppy profile thumbnails are square, horizontally scrollable, do not wrap, and hide the scrollbar on desktop and mobile. Thumbnails and the main photo show shimmer states while their images load.
+
 ### Email layout
 
 `functions/lib/contact-email.js` generates both HTML and plain-text versions of the contact message. Its HTML is inline-styled and adapted from the `email-json-sender` project while using Papillon & Co. branding. Keep email CSS mostly inline because many email clients strip external stylesheets.

@@ -91,7 +91,44 @@
       putText('contact-puppy-summary-age', [puppy.age, puppy.gender].filter(Boolean).join(' · '));
       putText('contact-puppy-summary-price', 'C$' + new Intl.NumberFormat('en-CA', { maximumFractionDigits: 0 }).format(Number(puppy.price) || 0));
       const image = byId('contact-puppy-image');
-      if (image) { image.src = puppy.image; image.alt = puppy.imageAlt || puppy.name; }
+      const imageWrap = byId('contact-puppy-image-wrap');
+      const imageFallback = byId('contact-puppy-image-fallback');
+      if (image && imageWrap) {
+        const candidates = [puppy.image]
+          .concat(Array.isArray(puppy.gallery) ? puppy.gallery.map(entry => typeof entry === 'string' ? entry : entry?.src) : [])
+          .filter((value, index, array) => typeof value === 'string' && value.trim() && array.indexOf(value) === index && /^(data:image\/(?:jpeg|png|webp|gif);base64,|https?:\/\/|\/(?!\/))/.test(value.trim()));
+        let candidateIndex = -1;
+        const showFallbackImage = () => {
+          image.removeAttribute('src');
+          image.hidden = true;
+          imageWrap.classList.remove('is-loading');
+          imageWrap.classList.add('image-unavailable');
+          if (imageFallback) imageFallback.hidden = false;
+        };
+        image.addEventListener('load', () => {
+          image.hidden = false;
+          imageWrap.classList.remove('is-loading', 'image-unavailable');
+          imageWrap.classList.add('is-loaded');
+          if (imageFallback) imageFallback.hidden = true;
+        });
+        image.addEventListener('error', () => {
+          candidateIndex += 1;
+          if (candidateIndex < candidates.length) {
+            imageWrap.classList.add('is-loading');
+            image.src = candidates[candidateIndex];
+          } else {
+            showFallbackImage();
+          }
+        });
+        if (candidates.length) {
+          image.hidden = false;
+          imageWrap.classList.add('is-loading');
+          candidateIndex = 0;
+          image.src = candidates[candidateIndex];
+        } else {
+          showFallbackImage();
+        }
+      }
       const backLink = byId('back-to-puppy-link');
       if (backLink) backLink.href = '/' + encodeURIComponent(puppy.slug);
       putText('contact-puppy-hidden-name', puppy.name);
@@ -99,7 +136,6 @@
       const hiddenSlug = byId('contact-puppy-slug'); if (hiddenSlug) hiddenSlug.value = puppy.slug;
       if (summary) summary.hidden = false;
       if (form) form.hidden = false;
-      if (image && image.decode) await Promise.race([image.decode().catch(() => {}), new Promise(resolve => setTimeout(resolve, 8000))]);
     } catch (error) {
       console.error('Could not prepare puppy contact page:', error);
       showFallback('We couldn’t load this puppy right now.', 'Please try again in a moment, or return to the available puppies page.');

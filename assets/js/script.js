@@ -80,9 +80,47 @@
   let publicPuppies = [];
   let currentPuppyPage = 1;
 
+  function createPuppySkeletonCard() {
+    const card = document.createElement('article');
+    card.className = 'puppy-card puppy-card-skeleton';
+    card.setAttribute('aria-hidden', 'true');
+    const link = document.createElement('div');
+    link.className = 'puppy-card-link';
+    const image = document.createElement('div');
+    image.className = 'puppy-image-wrap skeleton-shimmer';
+    const body = document.createElement('div');
+    body.className = 'puppy-card-body';
+    const title = document.createElement('div');
+    title.className = 'skeleton-block skeleton-title';
+    const metadata = document.createElement('div');
+    metadata.className = 'puppy-skeleton-meta';
+    const age = document.createElement('div');
+    age.className = 'skeleton-block skeleton-age';
+    const price = document.createElement('div');
+    price.className = 'skeleton-block skeleton-price';
+    metadata.append(age, price);
+    body.append(title, metadata);
+    link.append(image, body);
+    card.append(link);
+    return card;
+  }
+
+  function renderPuppySkeletons(count = PUPPIES_PER_PAGE) {
+    if (!puppyGrid) return;
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < count; index += 1) fragment.appendChild(createPuppySkeletonCard());
+    puppyGrid.replaceChildren(fragment);
+    puppyGrid.setAttribute('aria-busy', 'true');
+    if (puppyPagination) puppyPagination.hidden = true;
+  }
+
+  // Show full-card shimmer placeholders immediately while listings load.
+  if (puppyGrid) renderPuppySkeletons();
+
   function setListingMessage(message) {
     if (puppyGrid) {
       puppyGrid.replaceChildren();
+      puppyGrid.setAttribute('aria-busy', 'false');
       const notice = document.createElement('p');
       notice.className = 'availability-note';
       notice.textContent = message;
@@ -191,6 +229,7 @@
   function renderPuppyPage() {
     if (!puppyGrid) return;
     puppyGrid.replaceChildren();
+    puppyGrid.setAttribute('aria-busy', 'false');
     if (!publicPuppies.length) {
       renderEmptyPuppyState();
       return;
@@ -210,17 +249,27 @@
       profileLink.setAttribute('aria-label', 'View ' + item.name + "'s puppy profile");
 
       const imageWrap = document.createElement('div');
-      imageWrap.className = 'puppy-image-wrap';
+      imageWrap.className = 'puppy-image-wrap is-loading';
       const image = document.createElement('img');
-      if (typeof item.image === 'string' && item.image.startsWith('data:image/jpeg;base64,')) image.src = item.image;
       image.alt = item.imageAlt || (item.name + ' Papillon puppy');
       image.loading = 'lazy';
       image.decoding = 'async';
+      image.addEventListener('load', function () {
+        imageWrap.classList.remove('is-loading');
+        imageWrap.classList.add('is-loaded');
+      }, { once: true });
       image.addEventListener('error', function () {
         image.removeAttribute('src');
         image.alt = 'Puppy image unavailable';
+        imageWrap.classList.remove('is-loading');
         imageWrap.classList.add('image-unavailable');
       }, { once: true });
+      if (typeof item.image === 'string' && /^(data:image\/jpeg;base64,|https:\/\/|\/(?!\/))/.test(item.image)) {
+        image.src = item.image;
+      } else {
+        imageWrap.classList.remove('is-loading');
+        imageWrap.classList.add('image-unavailable');
+      }
       const status = document.createElement('span');
       status.className = 'puppy-status status-available';
       const dot = document.createElement('span');
