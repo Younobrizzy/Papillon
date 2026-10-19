@@ -27,14 +27,14 @@ The root folder intentionally keeps the entry-point files and Cloudflare Pages c
 
 ## Features
 
-- Responsive homepage, Shipping Policy page, puppy profiles, puppy-specific contact/delivery enquiry pages, and a custom 404 page.
+- Responsive homepage, Shipping Policy page, puppy profiles, and a custom 404 page.
 - Dashboard sign-in through Firebase Authentication (email/password). Any active Firebase Authentication user can access the dashboard; no `admins` collection or role document is required. No custom dashboard email/password Cloudflare variables or app-managed login cookie are used.
 - Firestore-backed puppy create, read, update, and delete operations. No puppy demo records are bundled or seeded.
 - One main JPEG photo per listing and up to eight gallery photos, each independently compressed to no more than **240 KiB (245,760 bytes)** before save and checked again by the server. The dashboard preflights the complete main listing size and the server validates the full size of the main and every gallery document before committing writes.
 - Clean puppy URLs such as `/little-puppy`; every listing uses the shared `puppy.html` template.
 - Landing-page pagination with six puppy cards per page, responsive page buttons, previous/next controls, ellipses, and a result count. This is client-side display pagination: `/api/puppies` returns the current public listing set in one request.
 - Public contact phone number loaded into the initial HTML, shown in its own labeled phone card on the homepage, and linked using `tel:`.
-- Public live-chat / site script field. The saved snippet is executed only on the homepage, puppy profile pages, puppy contact pages, and shipping page; it is not loaded on the dashboard or 404 page.
+- Public live-chat / site script field. The saved snippet is executed only on the homepage, puppy profile pages, and shipping page; it is not loaded on the dashboard or 404 page.
 - Server-rendered title, description, canonical, Open Graph, and Twitter metadata for the homepage, shipping page, and puppy slug routes. This gives link preview crawlers the listing details before client JavaScript executes.
 - Site-wide title, brand name, description, and optional custom social preview image editable in Preferences.
 - SMTP-powered contact email, with an inline-styled HTML version and a plain-text alternative.
@@ -111,8 +111,7 @@ Use the contents of this folder as the project root.
 | `/` | Homepage |
 | `/dashboard/` | Dashboard sign-in and private management interface |
 | `/shipping/` | Shipping Policy |
-| `/<puppy-slug>` | Puppy profile resolved from the listing slug using `puppy.html` |
-| `/contact/<puppy-slug>` | Puppy-specific enquiry form with contact details, shipping address, delivery preference, and preferred payment method |
+| `/<puppy-slug>` | Puppy profile resolved from Firestore using `puppy.html` |
 | `/404.html` | Branded not-found page |
 
 An unknown puppy slug renders the shared profile template, which displays a not-found state when the API returns no matching listing. The static name-specific profiles and old demo records have been removed. An empty Firestore `puppies` collection should produce an empty homepage listing state until you add real listings.
@@ -314,7 +313,6 @@ Paste the live-chat provider's full script snippet into **Public site script / l
 
 - the homepage (`/`)
 - the shared puppy profile (`/<puppy-slug>`)
-- the puppy-specific contact page (`/contact/<puppy-slug>`)
 - the Shipping Policy page (`/shipping/`)
 
 It is intentionally not loaded on `404.html` or `/dashboard/`. Treat this field as executable code: a saved snippet may run as JavaScript on every included page. Only use a snippet copied from a live-chat provider you trust. Do not paste passwords, private API keys, service-account JSON, or any other secret. A public script is not suitable for server credentials.
@@ -330,7 +328,7 @@ Older installations may have browser-local Preferences or values saved in the fo
 
 ## Instant SEO and social sharing previews
 
-On Cloudflare Pages, `functions/_middleware.js` intercepts the initial HTML response and fills metadata before sending it to the visitor or a social crawler. It covers the homepage, shipping page, clean puppy slug URLs, and `/contact/<puppy-slug>` pages. Contact page metadata identifies the selected puppy and uses that listing’s social image. It does not rewrite the dashboard or 404 page.
+On Cloudflare Pages, `functions/_middleware.js` intercepts the initial HTML response and fills metadata before sending it to the visitor or a social crawler. It covers the homepage, shipping page, and clean puppy slug URLs. It does not rewrite the dashboard or 404 page.
 
 The middleware sets or updates:
 
@@ -393,7 +391,7 @@ Install a supported Node.js release, open a terminal in the project root, and ru
 node scripts/dev-server.cjs
 ```
 
-Open `http://localhost:8080/`, `http://localhost:8080/shipping/`, a sample clean route such as `http://localhost:8080/example-puppy`, or `/contact/example-puppy`. The sample slug will show the profile template but display a not-found state unless a real listing exists in Firestore and the required API backend is running.
+Open `http://localhost:8080/`, `http://localhost:8080/shipping/`, or a sample clean route such as `http://localhost:8080/example-puppy`. The sample slug will show the profile template but display a not-found state unless a real listing exists in Firestore and the required API backend is running.
 
 `scripts/dev-server.cjs` is only a static development server. It does not execute Cloudflare Pages Functions, connect to Firestore, rewrite initial HTML metadata, or send SMTP messages. Therefore, an API-dependent feature can fail locally even though the static page itself loads.
 
@@ -411,7 +409,6 @@ Run `npm run validate` from the project root first. It checks required project f
 - [ ] `/dashboard/` opens the login page; successful login reaches the dashboard.
 - [ ] `/shipping/` loads and the `/shipping` alias redirects to `/shipping/`.
 - [ ] A real puppy slug opens that puppy, and a random missing slug displays the not-found state.
-- [ ] The puppy CTA opens `/contact/<slug>`, the selected puppy appears on the enquiry page, and a submission includes the shipping address and preferred delivery/payment methods in the email. Verify the page does not collect payment credentials or process a payment.
 - [ ] The 404 page and dashboard do **not** execute the public live-chat script.
 
 ### Firestore listings and image checks
@@ -427,7 +424,7 @@ Run `npm run validate` from the project root first. It checks required project f
 
 - [ ] Sign in, open Preferences, and save the site title, brand name, description, and phone number.
 - [ ] Confirm the phone card appears above the homepage contact form when configured; click it on a phone or use a browser's `tel:` handler.
-- [ ] Save a trusted test live-chat snippet and confirm it loads on the homepage, puppy profile, puppy contact, and shipping pages only.
+- [ ] Save a trusted test live-chat snippet and confirm it loads on the homepage, puppy profile, and shipping page only.
 - [ ] Confirm `GET /api/public-scripts` returns the public `script` and `phoneNumber`, but no contact email or SMTP password.
 - [ ] Confirm the public site settings appear in `siteConfig/public` and the optional social JPEG is saved in `siteConfig/siteOgImage`.
 
@@ -505,3 +502,12 @@ Decorative hero/about photos and their crop versions live under `assets/images/s
 ## Alternative hosting
 
 Cloudflare Pages is the supported production host because it runs the `functions/` backend alongside the static frontend. This project intentionally does not include an Apache/cPanel rewrite file: moving it to another host requires implementing equivalent server-side handling for Firestore access, Firebase Authentication verification, Preferences storage, social metadata middleware, the social image endpoint, and SMTP delivery. The included `node scripts/dev-server.cjs` is only for visual/static preview and is not a production backend.
+
+
+### Puppy contact pages
+
+- Each puppy detail page's **Contact us about this puppy** button opens `/contact/{listing-slug}`.
+- Cloudflare Pages rewrites `/contact/*` to the shared `contact/index.html` template; the page fetches the selected listing from `/api/puppies?slug=...` and displays its image, name, age, and price.
+- The form collects contact details, a shipping address, and a preferred payment method. This is an enquiry only: it does not collect card/bank credentials or process payment.
+- Submissions use the existing `/api/contact` endpoint and configured SMTP delivery, with the listing and structured shipping/payment preferences included in the notification email.
+- The server verifies that the referenced puppy document still exists before sending the enquiry.

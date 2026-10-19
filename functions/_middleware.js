@@ -60,7 +60,7 @@ function resolveListingSlug(pathname, url) {
 }
 
 function resolveContactSlug(pathname) {
-  const match = String(pathname || '').match(/^\/contact\/([^/]+)\/?$/);
+  const match = /^\/contact\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/i.exec(pathname);
   return match ? safeSlug(match[1]) : '';
 }
 
@@ -94,9 +94,10 @@ export async function onRequest(context) {
   const isHome = path === '/' || url.pathname === '/index.html';
   const isShipping = path === '/shipping/' || url.pathname === '/shipping/index.html';
   const contactSlug = resolveContactSlug(url.pathname);
-  const isContactPage = Boolean(contactSlug);
-  const slug = contactSlug || resolveListingSlug(url.pathname, url);
-  if (!isHome && !isShipping && !isContactPage && !slug) return response;
+  const isPuppyContact = Boolean(contactSlug);
+  const slug = resolveListingSlug(url.pathname, url);
+  const listingSlug = slug || contactSlug;
+  if (!isHome && !isShipping && !slug && !isPuppyContact) return response;
 
   const env = context.env || {};
   const [settingsResult, listingResult] = await Promise.all([
@@ -104,7 +105,7 @@ export async function onRequest(context) {
       console.error('[Papillon social metadata] Public settings unavailable:', error?.message || error);
       return {};
     }),
-    slug ? loadPuppy(env, slug).catch(error => {
+    listingSlug ? loadPuppy(env, listingSlug).catch(error => {
       console.error('[Papillon social metadata] Puppy metadata unavailable:', error?.message || error);
       return null;
     }) : Promise.resolve(null)
@@ -122,23 +123,20 @@ export async function onRequest(context) {
     ? '/api/og-image'
     : '/assets/images/og-image.jpg';
   let imageAlt = `${siteBranding} — Papillon puppies ready to meet their forever families.`;
-  let canonicalPath = isHome ? '/' : isShipping ? '/shipping/' : isContactPage ? `/contact/${contactSlug}` : `/${slug}`;
+  let canonicalPath = isHome ? '/' : isShipping ? '/shipping/' : isPuppyContact ? `/contact/${contactSlug}` : `/${slug}`;
 
-  if (isContactPage) {
-    if (listing) {
-      const puppyName = tidyText(listing.name || 'this puppy', 80);
-      title = `Enquiry about ${puppyName} | ${siteBranding}`;
-      description = `Share your contact, shipping, and payment preferences for ${puppyName}. We will confirm availability, costs, and next steps with you.`;
-      socialImagePath = `/api/og-image?slug=${encodeURIComponent(contactSlug)}`;
-      imageAlt = tidyText(listing.imageAlt || `${puppyName} puppy`, 180);
-    } else {
-      title = `Puppy enquiry | ${siteBranding}`;
-      description = 'Share your contact and delivery preferences. We will confirm puppy availability and next steps with you.';
-    }
-  } else if (isShipping) {
+  if (isShipping) {
     title = `Shipping Policy | ${siteBranding}`;
     description = PAGE_DESCRIPTIONS['/shipping/'];
     imageAlt = `${siteBranding} shipping policy`;
+  } else if (isPuppyContact && listing) {
+    title = `Contact us about ${tidyText(listing.name || 'this puppy', 80)} | ${siteBranding}`;
+    description = `Share your shipping details and preferred payment method to discuss bringing ${tidyText(listing.name || 'this puppy', 80)} home.`;
+    socialImagePath = `/api/og-image?slug=${encodeURIComponent(contactSlug)}`;
+    imageAlt = tidyText(listing.imageAlt || `${listing.name || 'Papillon'} puppy`, 180);
+  } else if (isPuppyContact && !listing) {
+    title = `Puppy Contact | ${siteBranding}`;
+    description = 'Contact Papillon & Co. about a puppy and discuss shipping and payment preferences.';
   } else if (slug && listing) {
     title = `${tidyText(listing.name || 'Papillon Puppy', 80)} | ${siteBranding}`;
     description = formatPuppyDescription(listing, siteDescription);

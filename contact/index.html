@@ -1,174 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#fbf7f0" />
-  <meta name="description" content="Share your contact and delivery preferences about a Papillon puppy. We'll confirm availability, shipping costs, and next steps with you." />
+  <meta name="description" content="Contact Papillon &amp; Co. about a puppy and discuss shipping and payment preferences." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Papillon &amp; Co." />
-  <meta property="og:title" content="Puppy enquiry | Papillon &amp; Co." />
-  <meta property="og:description" content="Tell us a little about your home and delivery preferences for a Papillon puppy." />
+  <meta property="og:title" content="Contact us about a puppy | Papillon &amp; Co." />
+  <meta property="og:description" content="Share your shipping details and preferred payment method to discuss bringing a puppy home." />
   <meta property="og:url" content="https://pet-project1.pages.dev/contact/" />
   <meta property="og:image" content="/assets/images/og-image.jpg" />
-  <meta property="og:image:secure_url" content="/assets/images/og-image.jpg" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:alt" content="Papillon &amp; Co. — little dogs, big love." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Puppy enquiry | Papillon &amp; Co." />
-  <meta name="twitter:description" content="Tell us a little about your home and delivery preferences for a Papillon puppy." />
-  <meta name="twitter:image" content="/assets/images/og-image.jpg" />
-  <link rel="canonical" href="https://pet-project1.pages.dev/contact/" />
-  <title>Puppy enquiry | Papillon &amp; Co.</title>
+  <title>Contact us about a puppy | Papillon &amp; Co.</title>
   <link rel="icon" href="/assets/icons/favicon.ico?v=20261017b" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20261017b" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20261017b" />
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png?v=20261017b" />
   <link rel="manifest" href="/assets/icons/site.webmanifest?v=20261017b" />
-  <link rel="stylesheet" href="/assets/css/styles.css?v=20261019-empty-listings" />
-  <link rel="stylesheet" href="/assets/css/navigation-loading.css?v=20261019-puppy-ready" />
-  <link rel="stylesheet" href="/assets/css/puppy-contact.css?v=20261019-contact-flow" />
-  <script src="/assets/js/navigation-loading.js?v=20261019-contact-ready" defer></script>
-  <script src="/assets/js/puppy-contact.js?v=20261019-contact-flow" defer></script>
+  <link rel="stylesheet" href="/assets/css/styles.css?v=20261019-puppy-contact" />
+  <link rel="stylesheet" href="/assets/css/navigation-loading.css?v=20261019-puppy-contact" />
+  <link rel="stylesheet" href="/assets/css/puppy-contact.css?v=20261019-puppy-contact" />
+  <script src="/assets/js/navigation-loading.js?v=20261019-puppy-contact" defer></script>
+  <script src="/assets/js/puppy-contact.js?v=20261019-puppy-contact" defer></script>
 </head>
 <body class="puppy-contact-page" aria-busy="true">
   <div class="site-navigation-loader is-visible" role="status" aria-live="polite" aria-hidden="false">
     <div class="navigation-loader-content">
       <span class="navigation-loader-spinner" aria-hidden="true"><span class="navigation-loader-mark"><img src="/assets/images/brand/papillon-mark.svg?v=20261017b" alt="" width="32" height="32" decoding="async" /></span></span>
       <p class="navigation-loader-brand">Papillon <i>&amp;</i> Co.</p>
-      <p class="navigation-loader-message">One little moment…</p>
+      <p class="navigation-loader-message">Preparing your puppy details…</p>
     </div>
   </div>
   <a class="skip-link" href="#main">Skip to content</a>
-
-  <div class="announcement-bar">
-    <span class="announcement-sparkle" aria-hidden="true">✦</span>
-    <p>A little love is waiting for you <span>— let's plan thoughtfully</span></p>
-    <a href="/#puppies">Meet the pups <span aria-hidden="true">↗</span></a>
-  </div>
-
+  <div class="announcement-bar"><span class="announcement-sparkle" aria-hidden="true">✦</span><p>A little love is waiting for you <span>— meet our available puppies</span></p><a href="/#puppies">Meet the pups <span aria-hidden="true">↗</span></a></div>
   <header class="site-header" id="top">
     <div class="header-inner container">
       <a class="brand" href="/" aria-label="Papillon and Co. home"><img class="brand-logo" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a>
       <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation"><span></span><span></span><span></span></button>
-      <nav class="primary-navigation" id="primary-navigation" aria-label="Main navigation">
-        <a class="nav-link" href="/">Home</a>
-        <a class="nav-link" href="/#puppies">Available puppies</a>
-        <a class="nav-link" href="/#about">About us</a>
-        <a class="nav-link" href="/shipping/">Shipping policy</a>
-        <a class="nav-contact" href="/#contact">Let's talk <span aria-hidden="true">↗</span></a>
-      </nav>
+      <nav class="primary-navigation" id="primary-navigation" aria-label="Main navigation"><a class="nav-link" href="/">Home</a><a class="nav-link active" href="/#puppies">Available puppies</a><a class="nav-link" href="/#about">About us</a><a class="nav-link" href="/shipping/">Shipping policy</a><a class="nav-contact" href="/#contact">Let's talk <span aria-hidden="true">↗</span></a></nav>
     </div>
   </header>
-
   <main id="main">
-    <section class="puppy-contact-section section-padding" id="puppy-contact-content" hidden>
+    <section class="puppy-contact-hero section-padding">
       <div class="container">
-        <nav class="contact-breadcrumbs" aria-label="Breadcrumb">
-          <a href="/">Home</a><span aria-hidden="true">/</span><a href="/#puppies">Available puppies</a><span aria-hidden="true">/</span><span id="contact-breadcrumb-name">Enquiry</span>
-        </nav>
+        <nav class="contact-breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/#puppies">Available puppies</a><span aria-hidden="true">/</span><span id="contact-breadcrumb-name">Contact about a puppy</span></nav>
+        <div class="puppy-contact-intro"><p class="eyebrow"><span class="eyebrow-line"></span> One little step closer</p><h1>Let's talk about <em id="contact-puppy-name">your puppy.</em></h1><p>Tell us how to reach you and where you'd like your puppy to go. We'll confirm availability, shipping options, and payment arrangements with you before anything is finalized.</p></div>
         <div class="puppy-contact-grid">
-          <div class="puppy-contact-intro">
-            <p class="eyebrow"><span class="eyebrow-line"></span> A thoughtful next step</p>
-            <h1>Let's talk about <em id="contact-title-puppy">your puppy.</em></h1>
-            <p class="contact-intro-copy">Share a few details about yourself and where your puppy would be going. We'll get back to you to confirm availability, travel options, costs, and the next steps.</p>
-
-            <article class="contact-puppy-card" aria-labelledby="contact-puppy-name">
-              <div class="contact-puppy-image-wrap">
-                <img id="contact-puppy-image" src="" alt="" width="180" height="180" decoding="async" hidden />
-                <span class="contact-puppy-image-placeholder" id="contact-puppy-image-placeholder" aria-hidden="true">✿</span>
-              </div>
-              <div class="contact-puppy-info">
-                <span class="profile-overline">Your selected puppy</span>
-                <h2 id="contact-puppy-name">Loading puppy…</h2>
-                <p id="contact-puppy-facts"></p>
-                <strong id="contact-puppy-price"></strong>
-                <span class="contact-puppy-status" id="contact-puppy-status"></span>
-              </div>
-            </article>
-
-            <div class="contact-safety-note">
-              <span class="contact-safety-icon" aria-hidden="true">♡</span>
-              <div><strong>No payment is taken here.</strong><p>Your selections are preferences only. We'll confirm availability, delivery arrangements, total cost, and the available payment options with you before anything is booked.</p></div>
-            </div>
-          </div>
-
-          <section class="contact-form contact-details-form-card" aria-labelledby="contact-form-title">
-            <div class="form-heading">
-              <span aria-hidden="true">✧</span>
-              <div><h2 id="contact-form-title">Tell us about your home</h2><p>Complete the details below to send your enquiry.</p></div>
-            </div>
-
-            <form id="puppy-contact-form" novalidate>
-              <h3 class="contact-form-section-title">Your contact details</h3>
-              <div class="form-row">
-                <div class="form-field"><label for="contact-full-name">Full name <span>*</span></label><input id="contact-full-name" name="name" type="text" autocomplete="name" maxlength="100" required /></div>
-                <div class="form-field"><label for="contact-email">Email address <span>*</span></label><input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required /></div>
-              </div>
-              <div class="form-field"><label for="contact-phone">Phone number <span>*</span></label><input id="contact-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="Include your country code" required /></div>
-
-              <h3 class="contact-form-section-title">Shipping address</h3>
-              <div class="form-field"><label for="shipping-address-line1">Street address <span>*</span></label><input id="shipping-address-line1" name="addressLine1" type="text" autocomplete="shipping address-line1" maxlength="160" required /></div>
-              <div class="form-field"><label for="shipping-address-line2">Apartment, unit, or additional address details</label><input id="shipping-address-line2" name="addressLine2" type="text" autocomplete="shipping address-line2" maxlength="120" /></div>
-              <div class="form-row">
-                <div class="form-field"><label for="shipping-city">City / town <span>*</span></label><input id="shipping-city" name="city" type="text" autocomplete="shipping address-level2" maxlength="100" required /></div>
-                <div class="form-field"><label for="shipping-region">State / province / region <span>*</span></label><input id="shipping-region" name="region" type="text" autocomplete="shipping address-level1" maxlength="100" required /></div>
-              </div>
-              <div class="form-row">
-                <div class="form-field"><label for="shipping-postal-code">Postal / ZIP code <span>*</span></label><input id="shipping-postal-code" name="postalCode" type="text" autocomplete="shipping postal-code" maxlength="24" required /></div>
-                <div class="form-field"><label for="shipping-country">Country <span>*</span></label><input id="shipping-country" name="country" type="text" autocomplete="shipping country-name" maxlength="80" required /></div>
-              </div>
-
-              <h3 class="contact-form-section-title">Delivery &amp; payment preferences</h3>
-              <div class="form-field"><label for="delivery-method">Preferred delivery option <span>*</span></label>
-                <select id="delivery-method" name="deliveryMethod" required>
-                  <option value="" selected disabled>Select an option</option>
-                  <option value="Pickup">Pickup, if available</option>
-                  <option value="Ground transport">Ground transport, if available</option>
-                  <option value="Air transport">Air transport, if available</option>
-                  <option value="Discuss delivery options">I'd like to discuss the options</option>
-                </select>
-              </div>
-              <div class="form-field"><label for="preferred-payment-method">Preferred payment method <span>*</span></label>
-                <select id="preferred-payment-method" name="paymentMethod" required>
-                  <option value="" selected disabled>Select a preferred method</option>
-                  <option value="Credit or debit card via secure payment link, if available">Credit or debit card via secure payment link (if available)</option>
-                  <option value="Bank transfer, if available">Bank transfer (if available)</option>
-                  <option value="E-transfer, if available">E-transfer (if available)</option>
-                  <option value="Discuss payment options">I'd like to discuss payment options</option>
-                </select>
-              </div>
-              <div class="form-field"><label for="contact-notes">Additional questions or notes</label><textarea id="contact-notes" name="notes" rows="4" maxlength="2000" placeholder="Anything you'd like us to know? (optional)"></textarea></div>
-
-              <label class="contact-consent"><input type="checkbox" name="enquiryAcknowledgement" required /><span>I understand this is an enquiry only and no payment or booking is made by submitting this form. <b>*</b></span></label>
-              <button class="button button-primary form-submit" id="puppy-contact-submit" type="submit">Send puppy enquiry <span aria-hidden="true">↗</span></button>
-              <p class="form-privacy">Please do not enter card numbers, bank account details, security codes, or passwords.</p>
-              <p class="form-feedback" id="puppy-contact-feedback" role="status" aria-live="polite"></p>
-            </form>
-          </section>
+          <aside class="puppy-contact-summary" id="contact-puppy-summary" hidden>
+            <div class="contact-puppy-image-wrap"><img id="contact-puppy-image" src="" alt="" /></div>
+            <div class="contact-puppy-summary-copy"><span class="profile-overline">Your selected puppy</span><h2 id="contact-puppy-summary-name"></h2><p id="contact-puppy-summary-age"></p><strong id="contact-puppy-summary-price"></strong><a class="text-link" id="back-to-puppy-link" href="#">Back to puppy details <span aria-hidden="true">→</span></a></div>
+          </aside>
+          <form class="contact-form puppy-contact-form" id="puppy-contact-form" novalidate hidden>
+            <input type="hidden" name="puppySlug" id="contact-puppy-slug" />
+            <input type="hidden" name="puppy" id="contact-puppy-hidden-name" />
+            <div class="form-heading"><span>✿</span><div><h3>Your details</h3><p>We'll use these details to follow up with you.</p></div></div>
+            <div class="form-row"><div class="form-field"><label for="contact-name">Full name <span>*</span></label><input id="contact-name" name="name" type="text" autocomplete="name" placeholder="Your full name" required minlength="2" maxlength="100" /></div><div class="form-field"><label for="contact-email">Email address <span>*</span></label><input id="contact-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254" /></div></div>
+            <div class="form-field"><label for="contact-phone">Phone number</label><input id="contact-phone" name="phone" type="tel" autocomplete="tel" placeholder="+1 (555) 123-4567" maxlength="40" /></div>
+            <div class="form-divider"><span>Shipping address</span><p>We'll confirm the available delivery options with you.</p></div>
+            <div class="form-field"><label for="shipping-address">Street address <span>*</span></label><input id="shipping-address" name="shippingAddress" type="text" autocomplete="address-line1" placeholder="Street address and house number" required maxlength="180" /></div>
+            <div class="form-field"><label for="shipping-address2">Apartment, suite, unit (optional)</label><input id="shipping-address2" name="shippingAddress2" type="text" autocomplete="address-line2" placeholder="Apartment, suite, unit" maxlength="180" /></div>
+            <div class="form-row"><div class="form-field"><label for="shipping-city">City <span>*</span></label><input id="shipping-city" name="city" type="text" autocomplete="address-level2" placeholder="City" required maxlength="100" /></div><div class="form-field"><label for="shipping-region">State / Province / Region</label><input id="shipping-region" name="region" type="text" autocomplete="address-level1" placeholder="State or province" maxlength="100" /></div></div>
+            <div class="form-row"><div class="form-field"><label for="shipping-postal">ZIP / Postal code</label><input id="shipping-postal" name="postalCode" type="text" autocomplete="postal-code" placeholder="ZIP or postal code" maxlength="30" /></div><div class="form-field"><label for="shipping-country">Country <span>*</span></label><input id="shipping-country" name="country" type="text" autocomplete="country-name" placeholder="Country" required maxlength="100" /></div></div>
+            <div class="form-divider"><span>Payment preference</span><p>This is a preference only. No payment is collected on this form.</p></div>
+            <div class="form-field"><label for="payment-method">Preferred payment method <span>*</span></label><select id="payment-method" name="preferredPaymentMethod" required><option value="">Choose a preference</option><option value="Bank transfer">Bank transfer</option><option value="PayPal">PayPal</option><option value="Cashier's cheque / money order">Cashier's cheque / money order</option><option value="Discuss options with me">Discuss options with me</option><option value="Other">Other</option></select></div>
+            <div class="form-field"><label for="contact-notes">Questions or additional notes</label><textarea id="contact-notes" name="message" rows="4" maxlength="4000" placeholder="Anything you'd like us to know? (optional)"></textarea></div>
+            <div class="form-honeypot" aria-hidden="true"><label for="contact-website">Leave this field empty</label><input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off" /></div>
+            <button class="button button-primary form-submit" type="submit">Send puppy enquiry <span aria-hidden="true">↗</span></button>
+            <p class="form-privacy">This sends an enquiry only. We will confirm availability, shipping, and payment details with you before any payment is made.</p>
+            <p class="form-feedback" id="puppy-contact-feedback" role="status" aria-live="polite"></p>
+          </form>
         </div>
-      </div>
-    </section>
-
-    <section class="puppy-contact-error section-padding" id="puppy-contact-error" hidden>
-      <div class="container not-found-inner">
-        <span class="not-found-paw" aria-hidden="true">🐾</span>
-        <p class="eyebrow"><span class="eyebrow-line"></span> One little detour</p>
-        <h1 id="contact-error-title">We couldn't load this puppy.</h1>
-        <p id="contact-error-message">This puppy link may be out of date. Browse the current listings and choose a puppy to continue.</p>
-        <a class="button button-primary" href="/#puppies">Browse available puppies <span aria-hidden="true">↗</span></a>
+        <section class="contact-page-fallback" id="contact-page-fallback" hidden><p class="eyebrow"><span class="eyebrow-line"></span> A little detour</p><h2 id="contact-fallback-title">We couldn't load this puppy.</h2><p id="contact-fallback-message">Please return to the available puppies page and try again.</p><a class="button button-primary" href="/#puppies">Browse available puppies <span aria-hidden="true">↗</span></a></section>
       </div>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="container footer-main">
-      <a class="brand footer-brand" href="/" aria-label="Papillon and Co. home"><img class="brand-logo" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a>
-      <p class="footer-note">For the love of little companions,<br />and the families who adore them.</p>
-      <nav class="footer-links" aria-label="Footer navigation"><a href="/">Home</a><a href="/#puppies">Puppies</a><a href="/#about">Our story</a><a href="/shipping/">Shipping</a><a href="/#contact">Contact</a></nav>
-      <a class="back-top" href="#top" aria-label="Back to top">↑</a>
-    </div>
-    <div class="container footer-bottom"><span class="site-footer-copy">© <span id="year"></span> Papillon &amp; Co. All rights reserved.</span><span>Made with <span class="footer-heart" aria-label="love">♡</span> for little paws.</span></div>
-  </footer>
-  <script src="/assets/js/public-scripts.js?v=20261019-contact-flow" defer></script>
+  <footer class="site-footer"><div class="container footer-main"><a class="brand footer-brand" href="/" aria-label="Papillon and Co. home"><img class="brand-logo" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a><p class="footer-note">For the love of little companions,<br />and the families who adore them.</p><nav class="footer-links" aria-label="Footer navigation"><a href="/">Home</a><a href="/#puppies">Puppies</a><a href="/#about">Our story</a><a href="/shipping/">Shipping</a><a href="/#contact">Contact</a></nav><a class="back-top" href="#top" aria-label="Back to top">↑</a></div><div class="container footer-bottom"><span class="site-footer-copy">© <span id="year"></span> Papillon &amp; Co. All rights reserved.</span><span>Made with <span class="footer-heart" aria-label="love">♡</span> for little paws.</span></div></footer>
+  <script src="/assets/js/public-scripts.js" defer></script>
 </body>
 </html>

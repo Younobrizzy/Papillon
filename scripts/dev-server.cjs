@@ -39,12 +39,6 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
   if (pathname === '/shipping/') pathname = '/shipping/index.html';
-  if (pathname === '/contact') {
-    res.writeHead(301, { Location: '/contact/' });
-    return res.end();
-  }
-  if (pathname === '/contact/') pathname = '/contact/index.html';
-  if (/^\/contact\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/i.test(pathname)) pathname = '/contact/index.html';
 
   if (pathname === '/') pathname = '/index.html';
 
@@ -80,5 +74,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Papillon Puppies is running at http://localhost:${PORT}`);
-  console.log('Clean routes: /<puppy-slug>, /contact/<puppy-slug>, /shipping/, /dashboard (API-backed listings require Cloudflare Pages Functions)');
+  console.log('Clean routes: /<puppy-slug>, /shipping/, /dashboard (API-backed listings require Cloudflare Pages Functions)');
 });

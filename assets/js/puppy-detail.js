@@ -382,12 +382,14 @@
       });
     }
 
-    const contactPath = '/contact/' + encodeURIComponent(String(record.slug || slug).toLowerCase());
-    document.querySelectorAll('[data-puppy-contact-link]').forEach(function (link) {
-      link.setAttribute('href', contactPath);
-    });
+    const contactUrl = '/contact/' + encodeURIComponent(puppy.slug);
     const cta = document.getElementById('puppy-enquiry-cta');
-    if (cta) cta.setAttribute('aria-label', 'Contact us about ' + puppy.name);
+    if (cta) {
+      cta.href = contactUrl;
+      cta.setAttribute('aria-label', 'Contact us about ' + puppy.name);
+    }
+    const contactLink = document.getElementById('puppy-contact-link');
+    if (contactLink) contactLink.href = contactUrl;
       }
     } catch (error) {
       console.error('Unable to render puppy profile:', error);

@@ -39,14 +39,20 @@ function baseTemplate({ eyebrow, title, bodyHtml, footerNote = '' }) {
 </html>`;
 }
 
-export function buildContactEmail({ name, email, subject, message, puppy = '' }) {
+export function buildContactEmail({ name, email, subject, message, puppy = '', phone = '', shippingAddress = '', shippingAddress2 = '', city = '', region = '', postalCode = '', country = '', preferredPaymentMethod = '', puppySlug = '' }) {
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
   const safeSubject = escapeHtml(subject);
   const safePuppy = escapeHtml(puppy);
   const safeMessage = escapeHtml(message).replace(/\r?\n/g, '<br>');
   const puppyRow = puppy ? `
-      <tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};width:105px;vertical-align:top;">Puppy</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};font-weight:600;">${safePuppy}</td></tr>` : '';
+      <tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};width:140px;vertical-align:top;">Puppy</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};font-weight:600;">${safePuppy}</td></tr>` : '';
+  const extraRows = [
+    ['Phone', phone],
+    ['Shipping address', [shippingAddress, shippingAddress2, city, region, postalCode, country].filter(Boolean).join('\n')],
+    ['Preferred payment method', preferredPaymentMethod],
+    ['Listing URL slug', puppySlug]
+  ].filter(([, value]) => String(value || '').trim()).map(([label, value]) => `<tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};width:140px;vertical-align:top;">${escapeHtml(label)}</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};overflow-wrap:anywhere;">${escapeHtml(value).replace(/\r?\n/g, '<br>')}</td></tr>`).join('');
 
   const html = baseTemplate({
     eyebrow: puppy ? 'Puppy enquiry' : 'Website contact form',
@@ -58,6 +64,7 @@ export function buildContactEmail({ name, email, subject, message, puppy = '' })
         <tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};vertical-align:top;">Email</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};word-break:break-word;"><a href="mailto:${safeEmail}" style="color:${ACCENT};text-decoration:underline;">${safeEmail}</a></td></tr>
         <tr><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:12px;line-height:18px;color:${MUTED};vertical-align:top;">Subject</td><td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;line-height:20px;color:${TEXT};font-weight:600;">${safeSubject}</td></tr>
         ${puppyRow}
+        ${extraRows}
       </table>
       <div style="margin:22px 0 0;">
         <div style="font-size:10px;line-height:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${MUTED};margin-bottom:8px;">Message</div>
@@ -75,6 +82,10 @@ export function buildContactEmail({ name, email, subject, message, puppy = '' })
     `Email: ${email}`,
     `Subject: ${subject}`,
     ...(puppy ? [`Puppy: ${puppy}`] : []),
+    ...(phone ? [`Phone: ${phone}`] : []),
+    ...([shippingAddress, shippingAddress2, city, region, postalCode, country].some(Boolean) ? [`Shipping address: ${[shippingAddress, shippingAddress2, city, region, postalCode, country].filter(Boolean).join(', ')}`] : []),
+    ...(preferredPaymentMethod ? [`Preferred payment method: ${preferredPaymentMethod}`] : []),
+    ...(puppySlug ? [`Listing URL slug: ${puppySlug}`] : []),
     '',
     'Message:',
     message,

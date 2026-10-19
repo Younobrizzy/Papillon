@@ -15,9 +15,7 @@
 # Canonical shipping policy URL.
 /shipping /shipping/ 301
 
-# Contact flow: all /contact/{listing-slug} paths use the shared enquiry page.
-/contact /contact/ 301
-/contact/ /contact/index.html 200
+# Puppy-specific contact forms use a shared dynamic template.
 /contact/* /contact/index.html 200
 
 # All puppy profile routes use the shared Firestore-powered template.

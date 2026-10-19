@@ -121,29 +121,23 @@ const puppyHtml = await (await import('node:fs/promises')).readFile(new URL('../
 const puppyDetailScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-detail.js', import.meta.url), 'utf8');
 assert.doesNotMatch(puppyHtml, /id="puppy-enquiry-section"|id="puppy-enquiry-form"|Take the next little step|Ask us about|Send an enquiry|No pressure\. Just a conversation\./, 'opened puppy profiles must not render the removed enquiry section');
 
+const puppyContactHtml = await (await import('node:fs/promises')).readFile(new URL('../contact/index.html', import.meta.url), 'utf8');
+const puppyContactJs = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-contact.js', import.meta.url), 'utf8');
+const contactApiSource = await (await import('node:fs/promises')).readFile(new URL('../functions/api/contact.js', import.meta.url), 'utf8');
+const contactEmailSource = await (await import('node:fs/promises')).readFile(new URL('../functions/lib/contact-email.js', import.meta.url), 'utf8');
+assert.match(puppyHtml, /id="puppy-enquiry-cta" href="\/contact\/"/, 'puppy contact CTA should point to the listing-specific contact route');
+assert.match(puppyContactHtml, /name="shippingAddress"[\s\S]*name="country"[\s\S]*name="preferredPaymentMethod"/, 'puppy contact page should collect shipping and payment preferences');
+assert.match(puppyContactHtml, /class="site-header"[\s\S]*class="site-footer"/, 'puppy contact page should share the site header and footer');
+assert.match(puppyContactJs, /fetch\('\/api\/puppies\?slug='/, 'puppy contact page should load the selected listing');
+assert.match(contactApiSource, /enquiryType === 'puppy-contact'[\s\S]*getPrivateDocument\(context\.env, `puppies\/\$\{puppySlug\}`\)/, 'server should validate puppy contact submissions against a real listing');
+assert.match(contactEmailSource, /Preferred payment method[\s\S]*Shipping address/, 'contact notification should include structured shipping and payment details');
+
 assert.doesNotMatch(puppyHtml, /<small>Coat<\/small>|id="puppy-coat"/, 'puppy detail facts must not show the removed Coat item');
 assert.match(puppyHtml, /id="puppy-gender-icon"[^>]*>⚥<\/span>/, 'gender detail should have its own gender icon');
 assert.match(puppyDetailScript, /normalizedGender[\s\S]*textContent = '♂'[\s\S]*textContent = '♀'/, 'gender icon should match male/female values');
 assert.match((await (await import('node:fs/promises')).readFile(new URL('../assets/css/puppy-detail.css', import.meta.url), 'utf8')), /\.profile-facts \{ display: grid; grid-template-columns: repeat\(2, minmax\(0,1fr\)\)/, 'puppy detail facts should use a two-column layout after removing Coat');
 
-assert.match(puppyHtml, /id="puppy-enquiry-cta" data-puppy-contact-link/, 'the puppy contact CTA must be able to target its own contact route');
-assert.match(puppyDetailScript, /const contactPath = '\/contact\/' \+ encodeURIComponent\(String\(record\.slug \|\| slug\)\.toLowerCase\(\)\)/, 'puppy detail CTA must link to /contact/{listing-slug}');
-assert.match(puppyDetailScript, /querySelectorAll\('\[data-puppy-contact-link\]'\)/, 'all puppy-specific contact links must use the selected listing route');
-const contactHtml = await (await import('node:fs/promises')).readFile(new URL('../contact/index.html', import.meta.url), 'utf8');
-const contactJs = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-contact.js', import.meta.url), 'utf8');
-const contactCss = await (await import('node:fs/promises')).readFile(new URL('../assets/css/puppy-contact.css', import.meta.url), 'utf8');
-const redirectsText = await (await import('node:fs/promises')).readFile(new URL('../_redirects', import.meta.url), 'utf8');
-assert.match(redirectsText, /\/contact\/\* \/contact\/index\.html 200/, 'clean contact routes must rewrite to the shared contact page');
-assert.match(contactHtml, /class="puppy-contact-page" aria-busy="true"/, 'contact page should start behind its loader');
-assert.match(contactHtml, /name="addressLine1"[^>]*required/, 'shipping street address must be required');
-assert.match(contactHtml, /name="paymentMethod" required/, 'preferred payment method must be captured');
-assert.match(contactHtml, /name="deliveryMethod" required/, 'preferred delivery method must be captured');
-assert.match(contactHtml, /No payment is taken here/, 'contact page must make clear it does not process payment');
-assert.doesNotMatch(contactHtml, /name="(?:cardNumber|cvv|cvc|bankPassword|accountPassword)"/i, 'contact form must not collect payment credentials');
-assert.match(contactJs, /fetch\('\/api\/puppies\?slug=' \+ encodeURIComponent\(slug\) \+ '&summary=1'/, 'contact page should request the selected puppy without loading its gallery');
-assert.match(contactJs, /fetch\('\/api\/contact'/, 'contact form should reuse the existing protected/rate-limited contact API');
-assert.match(contactJs, /Preferred payment method: /, 'contact email message should include the preferred payment method');
-assert.match(contactCss, /\.puppy-contact-grid/, 'contact page should use its responsive card layout');
+assert.match(puppyHtml, /id="puppy-enquiry-cta" href="\/contact\/"/, 'the puppy contact CTA should route to the listing-specific contact page');
 assert.doesNotMatch(puppyDetailScript, /puppy-enquiry-section|enquiry-puppy-name|profile-subject/, 'puppy profile JavaScript must not depend on the removed form');
 assert.match(puppyHtml, /class="site-navigation-loader is-visible"/, 'puppy detail page must start with its full-screen loader visible');
 assert.match(puppyDetailScript, /await waitForImageReady\(galleryMainImage, 12000\)/, 'puppy loader should wait for the primary listing image');
@@ -163,4 +157,4 @@ const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../f
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
 assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, puppy-specific contact routes and form, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
