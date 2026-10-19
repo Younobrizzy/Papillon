@@ -116,6 +116,19 @@ assert.doesNotMatch(dashboardScript, /firestore/i, 'dashboard script should not 
 assert.doesNotMatch(preferencesApi, /message:\s*['"]Preferences saved to Firestore/i, 'preferences success feedback should not mention the storage backend');
 
 
+// Individual puppy profiles intentionally omit the enquiry/contact-form section.
+const puppyHtml = await (await import('node:fs/promises')).readFile(new URL('../puppy.html', import.meta.url), 'utf8');
+const puppyDetailScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-detail.js', import.meta.url), 'utf8');
+assert.doesNotMatch(puppyHtml, /id="puppy-enquiry-section"|id="puppy-enquiry-form"|Take the next little step|Ask us about|Send an enquiry|No pressure\. Just a conversation\./, 'opened puppy profiles must not render the removed enquiry section');
+assert.match(puppyHtml, /id="puppy-enquiry-cta" href="\/#contact"/, 'the puppy contact CTA must route to the homepage contact form after removing the profile form');
+assert.doesNotMatch(puppyDetailScript, /puppy-enquiry-section|enquiry-puppy-name|profile-subject/, 'puppy profile JavaScript must not depend on the removed form');
+assert.match(puppyHtml, /class="site-navigation-loader is-visible"/, 'puppy detail page must start with its full-screen loader visible');
+assert.match(puppyDetailScript, /await waitForImageReady\(galleryMainImage, 12000\)/, 'puppy loader should wait for the primary listing image');
+assert.match(puppyDetailScript, /finally\s*\{[\s\S]*papillon:puppy-detail-ready/, 'puppy page should always report ready after content or fallback state is rendered');
+const navigationLoaderScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/navigation-loading.js', import.meta.url), 'utf8');
+assert.match(navigationLoaderScript, /papillon:puppy-detail-ready/, 'navigation loader should only dismiss on the details readiness event');
+assert.match(navigationLoaderScript, /if \(isPuppyDetailPage\)[\s\S]*papillon:puppy-detail-ready/, 'puppy details must bypass the ordinary navigation maximum timer');
+
 const publicScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/script.js', import.meta.url), 'utf8');
 const publicStyles = await (await import('node:fs/promises')).readFile(new URL('../assets/css/styles.css', import.meta.url), 'utf8');
 assert.match(publicScript, /function renderEmptyPuppyState\(\)/, 'homepage should have a dedicated empty-listing state renderer');
@@ -127,4 +140,4 @@ const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../f
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
 assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, and Firestore 1 MiB document-size guards.');
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');

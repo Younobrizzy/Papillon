@@ -6,7 +6,6 @@
   const nav = document.querySelector('.primary-navigation');
   const page = document.getElementById('puppy-profile');
   const notFound = document.getElementById('puppy-not-found');
-  const enquirySection = document.getElementById('puppy-enquiry-section');
   const year = document.getElementById('year');
   const galleryStage = document.getElementById('gallery-stage');
   const galleryMainImage = document.getElementById('puppy-image');
@@ -88,6 +87,40 @@
   function putText(id, value) {
     const element = document.getElementById(id);
     if (element) element.textContent = value;
+  }
+
+  function waitForImageReady(image, timeoutMs) {
+    timeoutMs = timeoutMs || 12000;
+    if (!image || !image.getAttribute('src')) return Promise.resolve(true);
+    if (image.complete) return Promise.resolve(image.naturalWidth > 0);
+
+    return new Promise(function (resolve) {
+      let settled = false;
+      let timer = null;
+      function finish(loaded) {
+        if (settled) return;
+        settled = true;
+        if (timer) window.clearTimeout(timer);
+        image.removeEventListener('load', onLoad);
+        image.removeEventListener('error', onError);
+        resolve(Boolean(loaded));
+      }
+      function onLoad() { finish(image.naturalWidth > 0); }
+      function onError() { finish(false); }
+      image.addEventListener('load', onLoad);
+      image.addEventListener('error', onError);
+      timer = window.setTimeout(function () { finish(image.complete && image.naturalWidth > 0); }, timeoutMs);
+      // The image may have resolved between the initial check and listener registration.
+      if (image.complete) finish(image.naturalWidth > 0);
+    });
+  }
+
+  function waitForPaint() {
+    return new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(resolve);
+      });
+    });
   }
 
   let galleryItems = [];
@@ -186,11 +219,21 @@
 
   async function initializePuppyPage() {
     try {
-      const response = await fetch('/api/puppies?slug=' + encodeURIComponent(slug), {
-        headers: { Accept: 'application/json' },
-        cache: 'no-store'
-      });
-      const result = await response.json().catch(() => ({}));
+      try {
+        const controller = new AbortController();
+        const requestTimeout = window.setTimeout(function () { controller.abort(); }, 15000);
+        let response;
+        let result;
+        try {
+          response = await fetch('/api/puppies?slug=' + encodeURIComponent(slug), {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+            signal: controller.signal
+          });
+          result = await response.json().catch(() => ({}));
+        } finally {
+          window.clearTimeout(requestTimeout);
+        }
       if (response.ok && result.puppy && result.puppy.image) {
         const record = result.puppy;
         const imageAlt = record.imageAlt || ((record.name || 'Papillon') + ' puppy');
@@ -220,40 +263,35 @@
           imageAlt,
           gallery: [{ src: record.image, alt: imageAlt }].concat(extraGallery.filter(function (entry) { return entry.src !== record.image; }))
         };
+        }
+      } catch (_) {
+        // Missing or slow API connections are treated as unavailable, not as demo data.
       }
-    } catch (_) {
-      // A missing API connection is treated as unavailable, not as demo data.
-    }
 
-  if (!puppy) {
+      if (!puppy) {
     if (page) page.hidden = true;
     if (notFound) notFound.hidden = false;
-    if (enquirySection) enquirySection.hidden = true;
     document.title = 'Puppy Not Found | Papillon & Co.';
     const description = document.querySelector('meta[name="description"]');
     if (description) description.setAttribute('content', 'This puppy profile could not be found. Browse available Papillon puppies.');
   } else {
     if (page) page.hidden = false;
-    if (enquirySection) enquirySection.hidden = false;
     document.title = 'Meet ' + puppy.name + ' | Papillon & Co.';
     const description = document.querySelector('meta[name="description"]');
     if (description) description.setAttribute('content', puppy.summary + ' Learn more about ' + puppy.name + ' at Papillon & Co.');
 
     putText('breadcrumb-puppy-name', puppy.name);
     putText('puppy-name', puppy.name);
-    putText('puppy-gender', puppy.gender + (puppy.coat ? ' · ' + puppy.coat : ''));
     putText('puppy-description', puppy.summary);
     putText('puppy-price', puppy.price);
     putText('puppy-age', puppy.age);
     putText('puppy-coat', puppy.coat);
-    putText('puppy-personality-short', puppy.personality);
+    putText('puppy-gender-fact', puppy.gender);
     putText('puppy-status', puppy.status);
     putText('puppy-story-heading', puppy.headline);
     putText('puppy-story-heading-em', puppy.headlineEm);
     putText('puppy-long-description', puppy.story);
-    putText('enquiry-puppy-name', puppy.name);
 
-    buildGallery(puppy.gallery || [{ src: puppy.image, alt: puppy.imageAlt }]);
     if (galleryMainImage) {
       galleryMainImage.addEventListener('error', function () {
         galleryMainImage.alt = 'Puppy photo is currently unavailable';
@@ -261,6 +299,14 @@
         const frame = galleryMainImage.closest('.profile-photo-frame');
         if (frame) frame.classList.add('profile-photo-unavailable');
       }, { once: true });
+    }
+    buildGallery(puppy.gallery || [{ src: puppy.image, alt: puppy.imageAlt }]);
+    const mainImageLoaded = await waitForImageReady(galleryMainImage, 12000);
+    if (!mainImageLoaded && galleryMainImage) {
+      galleryMainImage.alt = 'Puppy photo is currently unavailable';
+      galleryMainImage.style.visibility = 'hidden';
+      const frame = galleryMainImage.closest('.profile-photo-frame');
+      if (frame) frame.classList.add('profile-photo-unavailable');
     }
 
     if (galleryOpenButton) galleryOpenButton.addEventListener('click', openGalleryModal);
@@ -331,11 +377,25 @@
       });
     }
 
-    const subject = document.getElementById('profile-subject');
-    if (subject) subject.value = 'Enquiry about ' + puppy.name;
     const cta = document.getElementById('puppy-enquiry-cta');
     if (cta) cta.setAttribute('aria-label', 'Ask about ' + puppy.name);
-  }
+      }
+    } catch (error) {
+      console.error('Unable to render puppy profile:', error);
+      if (page) page.hidden = true;
+      if (notFound) {
+        notFound.hidden = false;
+        const heading = notFound.querySelector('h1');
+        const message = notFound.querySelector('.not-found-inner > p:not(.eyebrow)');
+        if (heading) heading.textContent = 'We could not load that puppy.';
+        if (message) message.textContent = 'The puppy details are temporarily unavailable. Please try again or browse available puppies.';
+      }
+      document.title = 'Puppy Profile Unavailable | Papillon & Co.';
+    } finally {
+      // Let the DOM and main photo state paint before lifting the full-screen loader.
+      await waitForPaint();
+      window.dispatchEvent(new Event('papillon:puppy-detail-ready'));
+    }
   }
   initializePuppyPage();
 

@@ -45,13 +45,19 @@
   <link rel="mask-icon" href="/assets/icons/favicon.svg?v=20261017b" color="#D66E55" />
   <link rel="manifest" href="/assets/icons/site.webmanifest?v=20261017b" />
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261019-empty-listings" />
-  <link rel="stylesheet" href="/assets/css/puppy-detail.css" />
-  <link rel="stylesheet" href="/assets/css/navigation-loading.css" />
-  <script src="/assets/js/navigation-loading.js" defer></script>
-  <script src="/assets/js/puppy-detail.js" defer></script>
-  <script src="/assets/js/contact-form.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/puppy-detail.css?v=20261019-no-profile-enquiry" />
+  <link rel="stylesheet" href="/assets/css/navigation-loading.css?v=20261019-puppy-ready" />
+  <script src="/assets/js/navigation-loading.js?v=20261019-puppy-ready" defer></script>
+  <script src="/assets/js/puppy-detail.js?v=20261019-puppy-ready" defer></script>
 </head>
-<body class="puppy-detail-page">
+<body class="puppy-detail-page" aria-busy="true">
+  <div class="site-navigation-loader is-visible" role="status" aria-live="polite" aria-hidden="false">
+    <div class="navigation-loader-content">
+      <span class="navigation-loader-spinner" aria-hidden="true"><span class="navigation-loader-mark"><img src="/assets/images/brand/papillon-mark.svg?v=20261017b" alt="" width="32" height="32" decoding="async" /></span></span>
+      <p class="navigation-loader-brand">Papillon <i>&amp;</i> Co.</p>
+      <p class="navigation-loader-message">One little moment…</p>
+    </div>
+  </div>
   <a class="skip-link" href="#main">Skip to content</a>
 
   <div class="announcement-bar">
@@ -107,7 +113,6 @@
             <div class="profile-summary">
               <p class="eyebrow"><span class="eyebrow-line"></span> Your potential new best friend</p>
               <h1>Meet <em id="puppy-name">Puppy</em><span class="profile-title-period">.</span></h1>
-              <p class="profile-gender" id="puppy-gender"></p>
               <p class="profile-description" id="puppy-description"></p>
 
               <div class="profile-price-panel">
@@ -118,11 +123,11 @@
               <div class="profile-facts" aria-label="Puppy details">
                 <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">◷</span><span><small>Age</small><strong id="puppy-age"></strong></span></div>
                 <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">✿</span><span><small>Coat</small><strong id="puppy-coat"></strong></span></div>
-                <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">♡</span><span><small>Personality</small><strong id="puppy-personality-short"></strong></span></div>
+                <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">♡</span><span><small>Gender</small><strong id="puppy-gender-fact"></strong></span></div>
               </div>
 
               <div class="profile-actions">
-                <a class="button button-primary" id="puppy-enquiry-cta" href="#puppy-enquiry">Ask about this puppy <span aria-hidden="true">↗</span></a>
+                <a class="button button-primary" id="puppy-enquiry-cta" href="/#contact">Contact us about this puppy <span aria-hidden="true">↗</span></a>
                 <a class="text-link" href="/#puppies">See all puppies <span aria-hidden="true">→</span></a>
               </div>
               <p class="profile-availability-note">Availability may change. Contact us before making arrangements.</p>
@@ -151,7 +156,7 @@
               <li>Ask about care and veterinary records</li>
               <li>Discuss pickup or travel options</li>
             </ul>
-            <a class="text-link" href="#puppy-enquiry">Start a conversation <span aria-hidden="true">→</span></a>
+            <a class="text-link" href="/#contact">Start a conversation <span aria-hidden="true">→</span></a>
           </aside>
         </div>
       </section>
@@ -167,32 +172,6 @@
       </div>
     </section>
 
-    <section class="contact-section section-padding profile-enquiry-section" id="puppy-enquiry-section" hidden>
-      <div class="container contact-grid">
-        <div class="contact-copy">
-          <p class="eyebrow"><span class="eyebrow-line"></span> Take the next little step</p>
-          <h2>Ask us about <em id="enquiry-puppy-name">this puppy</em>.</h2>
-          <p>Have questions about this puppy? Send us a note and we'll help you learn more. The name of the puppy will be included in your enquiry.</p>
-          <div class="contact-note"><span class="contact-note-icon" aria-hidden="true">♡</span><div><strong>No pressure. Just a conversation.</strong><span>Confirm details, ask questions, and see whether it's the right fit.</span></div></div>
-
-        </div>
-
-        <form class="contact-form" id="puppy-enquiry-form" novalidate>
-          <div class="contact-phone-banner" data-contact-phone hidden>
-            <span class="contact-phone-icon" aria-hidden="true">☎</span>
-            <div class="contact-phone-copy"><span>Prefer to call?</span><a data-contact-phone-link href="tel:"></a></div>
-          </div>
-          <div class="form-heading"><span aria-hidden="true">✿</span><div><h3>Send an enquiry</h3><p>We'll include the puppy's name for you.</p></div></div>
-          <div class="form-field"><label for="profile-name">Name <span>*</span></label><input id="profile-name" name="name" type="text" autocomplete="name" placeholder="Your name" required minlength="2" /></div>
-          <div class="form-field"><label for="profile-email">Email <span>*</span></label><input id="profile-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required /></div>
-          <div class="form-field"><label for="profile-subject">Subject <span>*</span></label><input id="profile-subject" name="subject" type="text" placeholder="Enquiry about this puppy" required minlength="2" /></div>
-          <div class="form-field"><label for="profile-message">Message <span>*</span></label><textarea id="profile-message" name="message" rows="4" placeholder="What would you like to know?" required minlength="2"></textarea></div>
-          <button class="button button-primary form-submit" type="submit">Send enquiry <span aria-hidden="true">↗</span></button>
-          <p class="form-privacy">Your enquiry is sent securely through our email service. We will reply to your email address.</p>
-          <p class="form-feedback" id="puppy-form-feedback" role="status" aria-live="polite"></p>
-        </form>
-      </div>
-    </section>
   </main>
 
   <footer class="site-footer">

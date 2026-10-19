@@ -81,6 +81,18 @@ if (!dashboardHtml.includes('id="dashboard-auth-loader"') || !dashboardHtml.incl
 if (!dashboardCss.includes('.dashboard-auth-loader.is-hidden') || !dashboardJs.includes('AUTH_TRANSITION_MIN_MS') || !dashboardJs.includes('await refreshListings();') || !dashboardJs.includes('await loadPreferencesIntoForm();')) {
   errors.push('Dashboard auth transition loader or initial-data wait is incomplete.');
 }
+const puppyHtml = fs.readFileSync(path.join(root, 'puppy.html'), 'utf8');
+const puppyDetailJs = fs.readFileSync(path.join(root, 'assets/js/puppy-detail.js'), 'utf8');
+const navigationLoaderJs = fs.readFileSync(path.join(root, 'assets/js/navigation-loading.js'), 'utf8');
+if (!puppyHtml.includes('class="site-navigation-loader is-visible"') || !puppyHtml.includes('body class="puppy-detail-page" aria-busy="true"')) {
+  errors.push('Puppy detail page must render the page loader before scripts run.');
+}
+if (!puppyDetailJs.includes('await waitForImageReady(galleryMainImage, 12000)') || !puppyDetailJs.includes("new Event('papillon:puppy-detail-ready')") || !puppyDetailJs.includes('await waitForPaint();')) {
+  errors.push('Puppy detail loader must wait for the listing and primary image to resolve before closing.');
+}
+if (!navigationLoaderJs.includes('papillon:puppy-detail-ready') || !navigationLoaderJs.includes('isPuppyDetailPage')) {
+  errors.push('Navigation loader must wait for the puppy detail readiness event rather than hiding on the page load event.');
+}
 
 const puppyApi = fs.readFileSync(path.join(root, 'functions/api/puppies.js'), 'utf8');
 const documentSizeGuard = fs.readFileSync(path.join(root, 'functions/lib/firestore-document-size.js'), 'utf8');

@@ -50,7 +50,6 @@
 .profile-summary .eyebrow { margin-bottom: 18px; }
 .profile-summary h1 { margin-bottom: 8px; font-size: clamp(54px, 6vw, 78px); }
 .profile-title-period { color: var(--coral); }
-.profile-gender { margin-bottom: 18px; color: #858b81; font-size: 12px; font-weight: 600; }
 .profile-description { max-width: 510px; margin-bottom: 26px; color: var(--muted); font-size: 14px; line-height: 1.9; }
 .profile-price-panel { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; padding: 18px 20px; border: 1px solid #e8ddcf; background: rgba(255,253,250,.75); }
 .profile-price-panel > div { display: flex; flex-direction: column; align-items: flex-start; }
@@ -85,22 +84,6 @@
 .profile-help-card li { display: flex; align-items: flex-start; gap: 9px; color: #526055; font-size: 10px; }
 .profile-help-card li::before { flex: 0 0 auto; color: var(--coral); content: '✓'; font-weight: 700; }
 .profile-help-card .text-link { position: relative; }
-.profile-enquiry-section { background: #f6f0e7; }
-.profile-enquiry-section .contact-grid { align-items: start; }
-.profile-enquiry-section .contact-copy { padding-top: 12px; }
-.profile-enquiry-section .contact-copy h2 { font-size: clamp(43px, 4.5vw, 58px); }
-.profile-enquiry-section .contact-note { display: flex; align-items: flex-start; gap: 12px; margin: 20px 0 25px; }
-.profile-enquiry-section .contact-note-icon { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border: 1px solid #ded4c7; border-radius: 50%; color: var(--coral); }
-.profile-enquiry-section .contact-note div { display: grid; gap: 4px; }
-.profile-enquiry-section .contact-note strong { font-size: 11px; }
-.profile-enquiry-section .contact-note div span { color: var(--muted); font-size: 10px; line-height: 1.7; }
-.profile-enquiry-section .contact-detail { display: flex; align-items: flex-start; gap: 12px; }
-.profile-enquiry-section .contact-detail-icon { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--sage); color: var(--coral-dark); }
-.profile-enquiry-section .contact-detail > div { display: grid; gap: 2px; }
-.profile-enquiry-section .contact-label { color: #889084; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.profile-enquiry-section .contact-detail a { font-size: 12px; font-weight: 700; }
-.profile-enquiry-section .contact-detail small { color: #969b92; font-size: 9px; }
-.profile-enquiry-section .form-privacy { margin: 11px 0 0; color: #979a90; font-size: 9px; line-height: 1.6; }
 .profile-not-found { min-height: 60vh; background: var(--paper); }
 .not-found-inner { max-width: 650px; margin-inline: auto; text-align: center; }
 .not-found-paw { display: block; margin-bottom: 15px; font-size: 43px; }
@@ -145,7 +128,6 @@
   .profile-story-grid { grid-template-columns: 1fr; gap: 35px; }
   .profile-story-copy h2 { font-size: clamp(39px, 10vw, 53px); }
   .profile-help-card { padding: 28px 23px 25px; }
-  .profile-enquiry-section .contact-copy { padding-top: 0; }
 }
 @media (max-width: 760px) {
   .gallery-arrow { display: none; }

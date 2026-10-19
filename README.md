@@ -33,11 +33,11 @@ The root folder intentionally keeps the entry-point files and Cloudflare Pages c
 - One main JPEG photo per listing and up to eight gallery photos, each independently compressed to no more than **240 KiB (245,760 bytes)** before save and checked again by the server. The dashboard preflights the complete main listing size and the server validates the full size of the main and every gallery document before committing writes.
 - Clean puppy URLs such as `/little-puppy`; every listing uses the shared `puppy.html` template.
 - Landing-page pagination with six puppy cards per page, responsive page buttons, previous/next controls, ellipses, and a result count. This is client-side display pagination: `/api/puppies` returns the current public listing set in one request.
-- Public contact phone number loaded into the initial HTML, shown in its own labeled phone card on the homepage and on puppy enquiry forms, and linked using `tel:`.
+- Public contact phone number loaded into the initial HTML, shown in its own labeled phone card on the homepage, and linked using `tel:`.
 - Public live-chat / site script field. The saved snippet is executed only on the homepage, puppy profile pages, and shipping page; it is not loaded on the dashboard or 404 page.
 - Server-rendered title, description, canonical, Open Graph, and Twitter metadata for the homepage, shipping page, and puppy slug routes. This gives link preview crawlers the listing details before client JavaScript executes.
 - Site-wide title, brand name, description, and optional custom social preview image editable in Preferences.
-- SMTP-powered contact and puppy enquiry email, with an inline-styled HTML version and a plain-text alternative.
+- SMTP-powered contact email, with an inline-styled HTML version and a plain-text alternative.
 - Shared butterfly mark used for the favicon and page loader, plus responsive layouts and reduced-motion support.
 
 ## Project structure
@@ -60,7 +60,7 @@ Use the contents of this folder as the project root.
 | `assets/css/navigation-loading.css` | Full-screen page navigation loader |
 | `assets/js/script.js` | Homepage listing rendering, pagination, menu, and favorites |
 | `assets/js/contact-form.js` | Contact form validation, loading state, and `/api/contact` submission |
-| `assets/js/puppy-detail.js` | Loads the selected puppy from Firestore and handles its gallery/enquiry form |
+| `assets/js/puppy-detail.js` | Loads the selected puppy from Firestore and handles its gallery and profile interactions |
 | `assets/js/dashboard.js` | Firebase Auth sign-in/state, bearer-token API requests, listing management, image compression, Preferences, dialogs, and toasts |
 | `assets/js/public-scripts.js` | Loads public phone/script configuration and executes the configured widget snippet |
 | `assets/js/firebase-config.js` | Fetches browser Firebase config from `/api/config` |
@@ -133,7 +133,7 @@ An unknown puppy slug renders the shared profile template, which displays a not-
 | `GET /api/public-scripts` | Public read | Returns `script`, `phoneNumber`, and update metadata; never returns SMTP secrets. |
 | `GET /api/og-image` | Public read | Serves the custom site social image or redirects to the built-in fallback. |
 | `GET /api/og-image?slug=<slug>` | Public read | Serves the main image for one puppy listing as JPEG bytes. |
-| `POST /api/contact` | Same-origin public form submission | Validates and delivers a contact or puppy enquiry email. |
+| `POST /api/contact` | Same-origin public form submission | Validates and delivers a contact email; the API also supports optional puppy-name metadata. |
 
 Dashboard mutation endpoints require a valid Firebase ID token from any active Firebase Authentication account, plus an allowed same-origin request for mutations. Every signed-in account can create/update/delete puppy listings and modify dashboard Preferences, including contact-recipient and SMTP settings. Firestore operations are made server-side using the service account. The browser never receives the service-account private key.
 
@@ -296,7 +296,7 @@ Sign in at `/dashboard/`, open **Preferences**, unlock any fields you need to ed
 | `siteTitle` | Default homepage title/social title |
 | `siteBranding` | Public brand name used in titles, Open Graph site name, image alt text, and footer copyright |
 | `siteDescription` | Default homepage and general site description; individual puppy descriptions are based on their summary/details and listing attributes |
-| `phoneNumber` | Public phone number inserted above the homepage contact form and puppy enquiry form |
+| `phoneNumber` | Public phone number displayed in the homepage contact card when configured |
 | `script` | Public live-chat or site snippet, loaded on selected public pages |
 | `siteOgImageAvailable` | Boolean indicating whether a custom social preview image is configured |
 | `updatedAt` | Last public settings save timestamp |
@@ -305,7 +305,7 @@ The actual optional custom social image is stored separately in Firestore docume
 
 ### Public phone number
 
-Enter a display-friendly phone number such as `+237 6XX XXX XXX` in Preferences. The backend accepts a formatted number with 7–20 digits. On the homepage and puppy profile route, Cloudflare middleware injects the phone number into the initial HTML when configured, so it can show before the frontend JavaScript finishes. On the homepage it appears in its own phone card with a phone icon and a “Call us” label; the card stays hidden if no number is configured. The link uses a normalized `tel:` destination. Leaving it blank hides the banner. The public scripts endpoint also returns the phone number as a fallback for client-side display.
+Enter a display-friendly phone number such as `+237 6XX XXX XXX` in Preferences. The backend accepts a formatted number with 7–20 digits. On the homepage, Cloudflare middleware injects the phone number into the initial HTML when configured, so it can show before the frontend JavaScript finishes. It appears in its own phone card with a phone icon and a “Call us” label; the card stays hidden if no number is configured. The link uses a normalized `tel:` destination. The public scripts endpoint also returns the phone number as a fallback for client-side display.
 
 ### Public site script / live chat
 
@@ -347,7 +347,7 @@ This server-side HTML rewriting is important because many social crawlers do not
 
 ## Contact forms and SMTP
 
-The homepage contact form and puppy enquiry form submit to `POST /api/contact`. The payload includes the visitor's name, email, subject, message, optional puppy name, and a hidden bot-trap field. The backend:
+The homepage contact form submits to `POST /api/contact`. The payload includes the visitor's name, email, subject, message, optional puppy name, and a hidden bot-trap field. The backend:
 
 1. checks the request is same-origin and within the body-size limit;
 2. quietly ignores form submissions where the hidden bot-trap field has been filled;
@@ -367,7 +367,7 @@ This is an ordinary contact-message workflow. It does not generate verification 
 4. Open **Preferences**, unlock **Contact email**, enter the address that should receive enquiries, and unlock the SMTP fields.
 5. Enter the SMTP host, submission port, and username/email. Enter the SMTP password/app password and save. A complete host, port, username, and password is required the first time.
 6. The saved SMTP password is encrypted with AES-GCM before it is stored in the private Firestore document `privateConfig/sitePreferences`; the password is not returned to the dashboard. Keep `SMTP_ENCRYPTION_KEY` stable. If that key is changed, the existing saved SMTP password cannot be decrypted, and you will need to save the password again under the intended key.
-7. Submit a test message from the homepage and a puppy enquiry form. Confirm the email reaches the configured Contact email and the visitor's address appears as Reply-To.
+7. Submit a test message from the homepage contact form. Confirm the email reaches the configured Contact email and the visitor's address appears as Reply-To.
 
 The SMTP username is used as the From email, and the displayed sender name is `Papillon & Co.`. The visitor's address is not substituted as the From email; it is used as Reply-To so email providers do not reject a forged sender. The SMTP provider must allow sending from the authenticated account.
 
@@ -423,7 +423,7 @@ Run `npm run validate` from the project root first. It checks required project f
 ### Preferences, phone, and live chat
 
 - [ ] Sign in, open Preferences, and save the site title, brand name, description, and phone number.
-- [ ] Confirm the phone is above the homepage contact form and the puppy enquiry form; click it on a phone or use a browser's `tel:` handler.
+- [ ] Confirm the phone card appears above the homepage contact form when configured; click it on a phone or use a browser's `tel:` handler.
 - [ ] Save a trusted test live-chat snippet and confirm it loads on the homepage, puppy profile, and shipping page only.
 - [ ] Confirm `GET /api/public-scripts` returns the public `script` and `phoneNumber`, but no contact email or SMTP password.
 - [ ] Confirm the public site settings appear in `siteConfig/public` and the optional social JPEG is saved in `siteConfig/siteOgImage`.
@@ -438,7 +438,7 @@ Run `npm run validate` from the project root first. It checks required project f
 ### Contact email checks
 
 - [ ] Save the contact recipient email and a valid SMTP host, port, username, and password in Preferences.
-- [ ] Submit both the homepage contact form and a puppy enquiry form.
+- [ ] Submit the homepage contact form.
 - [ ] Confirm the receiver gets an HTML-styled email and the plain-text body is available.
 - [ ] Confirm Reply-To is the visitor's submitted email address.
 - [ ] Verify invalid input is rejected and repeated submissions are rate-limited.

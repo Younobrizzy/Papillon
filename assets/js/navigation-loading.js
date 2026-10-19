@@ -27,6 +27,10 @@
   function ensureLoader() {
     if (loader) return loader;
 
+    // Puppy pages ship the loader in HTML so it is visible before any script runs.
+    loader = document.querySelector('.site-navigation-loader');
+    if (loader) return loader;
+
     loader = document.createElement('div');
     loader.className = 'site-navigation-loader';
     loader.setAttribute('role', 'status');
@@ -72,10 +76,15 @@
       url.search === window.location.search;
   }
 
-  // Show the transition on the destination page too, so full-page navigations feel continuous.
+  // Puppy detail pages must stay covered until the listing content and primary image resolve.
+  // Other pages keep the ordinary navigation transition with its short maximum duration.
+  var isPuppyDetailPage = Boolean(document.body && document.body.classList.contains('puppy-detail-page'));
   var pendingAt = Number(safeStorageGet(PENDING_KEY));
   safeStorageRemove(PENDING_KEY);
-  if (pendingAt && Date.now() - pendingAt < PENDING_TTL) {
+  if (isPuppyDetailPage) {
+    showLoader();
+    window.addEventListener('papillon:puppy-detail-ready', hideAfterMinimumTime, { once: true });
+  } else if (pendingAt && Date.now() - pendingAt < PENDING_TTL) {
     showLoader();
     maxTimer = window.setTimeout(hideLoader, MAX_DESTINATION_VISIBLE_MS);
     if (document.readyState === 'complete') {
