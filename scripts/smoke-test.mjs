@@ -3,6 +3,7 @@ import { encryptSecret, decryptSecret } from '../functions/lib/crypto.js';
 import { readFirebaseSession } from '../functions/lib/admin-session.js';
 import { generateKeyPairSync } from 'node:crypto';
 import { getFirebaseSigningKey } from '../functions/lib/firebase-key.js';
+import { assertFirestoreDocumentFits, estimateFirestoreDocumentSizeBytes, FIRESTORE_DOCUMENT_LIMIT_BYTES, FIRESTORE_DOCUMENT_MAX_SAFE_BYTES } from '../functions/lib/firestore-document-size.js';
 
 // Firebase service-account key parsing accepts common Cloudflare secret formats.
 const { privateKey: generatedPrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -25,6 +26,26 @@ await assert.rejects(
   /complete PKCS#8 private_key PEM/,
   'malformed private key values should return a clear configuration error'
 );
+
+// Firestore document-size accounting includes the document path, field names,
+// UTF-8 string sizes, and document overhead. The server must reject oversize writes.
+assert.equal(FIRESTORE_DOCUMENT_LIMIT_BYTES, 1024 * 1024, 'document limit must be 1 MiB');
+assert.equal(FIRESTORE_DOCUMENT_MAX_SAFE_BYTES, (1024 * 1024) - 4, 'REST writes keep a 4-byte safety margin');
+assert.equal(estimateFirestoreDocumentSizeBytes({ name: 'A' }, 'puppies/test'), 68, 'small document estimate includes path and overhead');
+assert.ok(estimateFirestoreDocumentSizeBytes({ name: 'é🐶' }, 'puppies/test') > estimateFirestoreDocumentSizeBytes({ name: 'A' }, 'puppies/test'), 'size estimate counts UTF-8 bytes');
+const maxAllowedCover = 'data:image/jpeg;base64,' + Buffer.alloc(240 * 1024).toString('base64');
+assert.ok(estimateFirestoreDocumentSizeBytes({ slug: 'sample-puppy', name: 'Sample', image: maxAllowedCover, imageSizeBytes: 240 * 1024 }, 'puppies/sample-puppy') < FIRESTORE_DOCUMENT_MAX_SAFE_BYTES, 'the configured 240 KiB image cap leaves room for listing fields');
+assert.throws(
+  () => assertFirestoreDocumentFits({ image: 'x'.repeat(1024 * 1024) }, 'puppies/oversize'),
+  /too large to save/,
+  'documents above the 1 MiB cap must be rejected before writes'
+);
+
+// Regression guard: Cloudflare places remoteAddress on the SocketInfo returned by `opened`.
+const smtpSource = await (await import('node:fs/promises')).readFile(new URL('../functions/lib/smtp.js', import.meta.url), 'utf8');
+assert.match(smtpSource, /const socketInfo = await withTimeout\(socket\.opened/,'SMTP connection must capture SocketInfo from socket.opened');
+assert.match(smtpSource, /const remoteAddress = socketInfo\?\.remoteAddress/,'SMTP peer validation must read the remote address from SocketInfo');
+assert.doesNotMatch(smtpSource, /socket\.remoteAddress/,'SMTP code must not read remoteAddress directly from Socket');
 
 const env = { SMTP_ENCRYPTION_KEY: 'local-test-key-do-not-use-in-production-2026' };
 const secret = 'smtp-password-for-test-only';
@@ -102,4 +123,8 @@ assert.match(publicScript, /heading\.textContent = 'No puppy listings yet'/, 'em
 assert.match(publicScript, /if \(!publicPuppies\.length\)\s*\{\s*renderEmptyPuppyState\(\);/, 'empty listing response should render the dedicated state');
 assert.match(publicStyles, /\.puppy-empty-state\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/s, 'empty state should span the full puppy grid width');
 
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, and the public no-listings state.');
+const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../functions/api/puppies.js', import.meta.url), 'utf8');
+assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
+assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
+assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, and Firestore 1 MiB document-size guards.');

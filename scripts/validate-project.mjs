@@ -10,7 +10,7 @@ const requiredFiles = [
   'index.html', 'puppy.html', 'dashboard/index.html', 'shipping/index.html',
   'functions/_middleware.js', 'functions/api/config.js', 'functions/api/admin-session.js',
   'functions/api/puppies.js', 'functions/api/preferences.js', 'functions/api/public-scripts.js',
-  'functions/api/contact.js', 'functions/api/og-image.js', 'functions/lib/private-firestore.js',
+  'functions/api/contact.js', 'functions/api/og-image.js', 'functions/lib/private-firestore.js', 'functions/lib/firestore-document-size.js',
   'functions/lib/admin-session.js', 'functions/lib/crypto.js', 'functions/lib/smtp.js',
   'config/firestore.rules', 'assets/icons/site.webmanifest', 'scripts/dev-server.cjs', '.dev.vars.example', 'README.md'
 ];
@@ -82,11 +82,25 @@ if (!dashboardCss.includes('.dashboard-auth-loader.is-hidden') || !dashboardJs.i
   errors.push('Dashboard auth transition loader or initial-data wait is incomplete.');
 }
 
+const puppyApi = fs.readFileSync(path.join(root, 'functions/api/puppies.js'), 'utf8');
+const documentSizeGuard = fs.readFileSync(path.join(root, 'functions/lib/firestore-document-size.js'), 'utf8');
+if (!puppyApi.includes('assertFirestoreDocumentFits(mainFields') || !puppyApi.includes('assertFirestoreDocumentFits(galleryFields')) {
+  errors.push('Puppy API must size-check both listing and gallery documents before committing writes.');
+}
+if (!documentSizeGuard.includes('1024 * 1024') || !documentSizeGuard.includes('FIRESTORE_DOCUMENT_MAX_SAFE_BYTES')) {
+  errors.push('Firestore document-size guard must enforce the 1 MiB document limit with a REST safety margin.');
+}
+if (!dashboardJs.includes('estimateDocumentSizeBytes(estimatedMainDocument')) {
+  errors.push('Dashboard must preflight the listing document size before submitting it.');
+}
+
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const varsExample = fs.readFileSync(path.join(root, '.dev.vars.example'), 'utf8');
 const rules = fs.readFileSync(path.join(root, 'config/firestore.rules'), 'utf8');
 const privateFirestore = fs.readFileSync(path.join(root, 'functions/lib/private-firestore.js'), 'utf8');
 const contact = fs.readFileSync(path.join(root, 'functions/api/contact.js'), 'utf8');
+const smtpSource = fs.readFileSync(path.join(root, 'functions/lib/smtp.js'), 'utf8');
+if (!smtpSource.includes('const socketInfo = await withTimeout(socket.opened') || !smtpSource.includes('const remoteAddress = socketInfo?.remoteAddress') || smtpSource.includes('socket.remoteAddress')) errors.push('SMTP must read remoteAddress from the SocketInfo returned by socket.opened.');
 
 for (const name of ['FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN', 'FIREBASE_STORAGE_BUCKET', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_APP_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'SMTP_ENCRYPTION_KEY']) {
   if (!varsExample.includes(name)) errors.push(`Missing ${name} from .dev.vars.example`);

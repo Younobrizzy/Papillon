@@ -341,6 +341,31 @@
   const MAX_GALLERY_IMAGES = 8;
   const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
   const TARGET_IMAGE_BYTES = 240 * 1024;
+  const DOCUMENT_LIMIT_BYTES = 1024 * 1024;
+  const DOCUMENT_MAX_SAFE_BYTES = DOCUMENT_LIMIT_BYTES - 4;
+  const documentSizeEncoder = new TextEncoder();
+
+  function storedStringSize(value) {
+    return documentSizeEncoder.encode(String(value)).byteLength + 1;
+  }
+
+  function storedValueSize(value) {
+    if (value === null || value === undefined) return 1;
+    if (typeof value === 'string') return storedStringSize(value);
+    if (typeof value === 'boolean') return 1;
+    if (typeof value === 'number') return 8;
+    if (Array.isArray(value)) return value.reduce((sum, entry) => sum + storedValueSize(entry), 0);
+    if (typeof value === 'object') {
+      return 32 + Object.entries(value).reduce((sum, [key, nested]) => sum + storedStringSize(key) + storedValueSize(nested), 0);
+    }
+    return 1;
+  }
+
+  function estimateDocumentSizeBytes(fields, documentPath) {
+    const nameBytes = 16 + String(documentPath || '').split('/').filter(Boolean).reduce((sum, part) => sum + storedStringSize(part), 0);
+    const fieldBytes = Object.entries(fields || {}).reduce((sum, [key, value]) => sum + storedStringSize(key) + storedValueSize(value), 0);
+    return nameBytes + fieldBytes + 32;
+  }
   let currentCoverImage = '';
   let currentCoverName = '';
   let currentCoverSize = 0;
@@ -681,6 +706,42 @@
       details: details || (existingItem && existingItem.details) || summary,
       gallery
     };
+
+    // Check the complete saved document size before submitting. The server
+    // independently repeats this check before any write is committed.
+    const sizeCheckNow = new Date().toISOString();
+    const estimatedMainDocument = {
+      slug: item.slug,
+      name: item.name.slice(0, 80),
+      gender: String(item.gender || '').slice(0, 24),
+      coat: String(item.coat || '').slice(0, 60),
+      age: item.age.slice(0, 80),
+      price: item.price,
+      status: String(item.status || 'Looking for a home').slice(0, 80),
+      personality: String(item.personality || '').slice(0, 120),
+      image: item.image,
+      imageAlt: item.imageAlt.slice(0, 160),
+      imageSizeBytes: currentCoverSize || 0,
+      summary: String(item.summary || '').slice(0, 500),
+      details: String(item.details || item.summary || '').slice(0, 5000),
+      galleryCount: gallery.length,
+      createdAt: existingItem && existingItem.createdAt ? existingItem.createdAt : sizeCheckNow,
+      updatedAt: sizeCheckNow
+    };
+    const estimatedMainBytes = estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug);
+    const oversizedGalleryIndex = gallery.findIndex((src, index) => estimateDocumentSizeBytes({
+      image: src,
+      name: 'Gallery photo ' + (index + 1),
+      alt: name + ' puppy photo ' + (index + 1),
+      sizeBytes: 0,
+      sortOrder: index + 1
+    }, 'puppies/' + slug + '/gallery/photo-' + String(index + 1).padStart(2, '0')) > DOCUMENT_MAX_SAFE_BYTES);
+    if (estimatedMainBytes > DOCUMENT_MAX_SAFE_BYTES || oversizedGalleryIndex >= 0) {
+      listingFormError.textContent = 'This listing is too large to save. Please choose a smaller photo or shorten the listing text.';
+      listingFormError.hidden = false;
+      return;
+    }
+
     const existingIndex = listings.findIndex(entry => entry.slug === originalSlug);
     const saveButton = $('#save-listing-button');
     if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving…'; }

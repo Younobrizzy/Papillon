@@ -1,5 +1,6 @@
 import { cleanText, jsonResponse, readFirebaseSession, sameOriginRequest } from '../lib/admin-session.js';
 import { getFirebaseSigningKey } from '../lib/firebase-key.js';
+import { assertFirestoreDocumentFits } from '../lib/firestore-document-size.js';
 
 const MAX_IMAGE_BYTES = 240 * 1024;
 const MAX_GALLERY_IMAGES = 8;
@@ -368,6 +369,11 @@ export async function onRequestPost(context) {
       updatedAt: now
     };
 
+    // Enforce the full per-document limit before the batch reaches Firestore.
+    // The cover image is in the main listing document; every gallery image has
+    // an independent document and is checked separately below.
+    assertFirestoreDocumentFits(mainFields, `puppies/${slug}`, 'This puppy listing');
+
     const galleryPath = `/puppies/${encodeURIComponent(slug)}/gallery`;
     const previousGalleryDocuments = await listDocuments(env, galleryPath);
     const desiredIds = new Set(gallery.map((_, index) => `photo-${String(index + 1).padStart(2, '0')}`));
@@ -375,9 +381,11 @@ export async function onRequestPost(context) {
     const writes = [{ update: { name: rootName, fields: firestoreFields(mainFields) } }];
     gallery.forEach((entry, index) => {
       const photoId = `photo-${String(index + 1).padStart(2, '0')}`;
+      const galleryFields = { image: entry.src, name: entry.name, alt: entry.alt, sizeBytes: entry.size, sortOrder: index + 1 };
+      assertFirestoreDocumentFits(galleryFields, `puppies/${slug}/gallery/${photoId}`, `Gallery photo ${index + 1}`);
       writes.push({ update: {
         name: `${rootName}/gallery/${photoId}`,
-        fields: firestoreFields({ image: entry.src, name: entry.name, alt: entry.alt, sizeBytes: entry.size, sortOrder: index + 1 })
+        fields: firestoreFields(galleryFields)
       } });
     });
     previousGalleryDocuments.forEach(document => {

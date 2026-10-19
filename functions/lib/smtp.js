@@ -52,12 +52,14 @@ async function openSmtpSocket(host, port, security) {
       : { secureTransport: "starttls", allowHalfOpen: false }
   );
 
-  await withTimeout(socket.opened, "SMTP connection timed out.");
+  // Cloudflare resolves `opened` with SocketInfo, which contains the actual
+  // peer address. The Socket itself does not expose `remoteAddress` directly.
+  const socketInfo = await withTimeout(socket.opened, "SMTP connection timed out.");
 
   // Hostname validation alone is not enough: a public hostname can resolve
   // to a private/reserved address (including through DNS rebinding). Inspect
   // the address Cloudflare actually connected to before speaking SMTP.
-  const remoteAddress = socket.remoteAddress;
+  const remoteAddress = socketInfo?.remoteAddress;
   if (!remoteAddress || !isPublicIpAddress(remoteAddress)) {
     try { socket.close(); } catch {}
     const error = new Error("SMTP host resolved to a private or reserved network address.");
