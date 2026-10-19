@@ -215,18 +215,26 @@ export async function verifySmtpSender({ host, port, security, user, password, f
   }
 }
 
-export async function sendSmtp({ host, port, security, user, password, fromEmail, fromName, ehloName, payload }) {
+export async function sendSmtp({ host, port, security, user, password, fromEmail, envelopeFromEmail, fromName, ehloName, payload }) {
   validateSmtpHost(host);
-  // A custom From email is optional. The SMTP server must accept it for the
-  // authenticated account; otherwise MAIL FROM fails and the email is not sent.
+  // Keep the visible From identity separate from the SMTP envelope sender.
+  // Contact forms can display the visitor as From while the authenticated
+  // mailbox remains responsible for the SMTP transaction. Providers may still
+  // apply their own anti-spoofing / DMARC policy to the visible From address.
   const requestFrom = String(fromEmail || user || "").trim();
+  const envelopeSender = String(envelopeFromEmail || user || requestFrom).trim();
   const requestFromName =
     payload?.name !== undefined && payload?.name !== null && String(payload.name).trim()
       ? String(payload.name).trim()
       : String(fromName || "").trim();
 
   if (!requestFrom || !/^[^\s@<>]+@[^\s@<>]+$/.test(requestFrom)) {
-    const error = new Error("SMTP username must be a valid sender email address.");
+    const error = new Error("From email must be a valid email address.");
+    error.status = 400;
+    throw error;
+  }
+  if (!envelopeSender || !/^[^\s@<>]+@[^\s@<>]+$/.test(envelopeSender)) {
+    const error = new Error("SMTP envelope sender must be a valid email address.");
     error.status = 400;
     throw error;
   }
@@ -293,7 +301,7 @@ export async function sendSmtp({ host, port, security, user, password, fromEmail
     const recipients = [...to, ...cc, ...bcc];
 
     stage = "MAIL FROM";
-    const mailFromResult = await withTimeout(sendMailFrom(client, requestFrom), "SMTP sender command timed out.");
+    const mailFromResult = await withTimeout(sendMailFrom(client, envelopeSender), "SMTP sender command timed out.");
 
     stage = "RCPT TO";
     for (const recipient of recipients) {
@@ -309,7 +317,7 @@ export async function sendSmtp({ host, port, security, user, password, fromEmail
     stage = "DATA";
     await withTimeout(client.command("DATA", [354]), "SMTP DATA command timed out.");
 
-    const messageId = `<${crypto.randomUUID()}@${messageDomain(requestFrom, host)}>`;
+    const messageId = `<${crypto.randomUUID()}@${messageDomain(envelopeSender, host)}>`;
     const rawMessage = buildMimeMessage({
       from: requestFrom,
       fromName: requestFromName,

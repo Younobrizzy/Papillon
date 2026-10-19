@@ -347,15 +347,17 @@ This server-side HTML rewriting is important because many social crawlers do not
 
 ## Contact forms and SMTP
 
-The homepage contact form submits to `POST /api/contact`. The payload includes the visitor's name, email, subject, message, optional puppy name, and a hidden bot-trap field. The backend:
+The homepage contact form submits to `POST /api/contact`. The payload includes the visitor's name, email, subject, message, optional puppy name, and a hidden bot-trap field. The `/contact/{slug}` form submits shipping/payment details and the selected listing slug to the same endpoint. The backend:
 
 1. checks the request is same-origin and within the body-size limit;
 2. quietly ignores form submissions where the hidden bot-trap field has been filled;
-3. validates name, email, subject, and message;
+3. validates the visitor's name and email, plus the required fields for the submitted form;
 4. rate-limits each client IP to five sends per ten minutes using a Firestore transaction on `contactRateLimits/{hashedIp}`;
-5. reads the contact recipient and SMTP settings from the private Firestore document `privateConfig/sitePreferences`;
-6. decrypts the SMTP password in the Worker and connects to the configured server;
-7. sends a Papillon-branded HTML email plus a plain-text alternative, with the visitor email set as `Reply-To`.
+5. loads the contact recipient and SMTP settings from the private Firestore document `privateConfig/sitePreferences` and decrypts the SMTP password in the Worker;
+6. reads the puppy listing server-side for listing-specific enquiries;
+7. sends a Papillon-branded HTML email plus a plain-text alternative through the configured SMTP server.
+
+The visible email `From` header uses the visitor's submitted name and email, while the authenticated SMTP username remains the envelope sender; the visitor's email is also set as `Reply-To`. The homepage email subject is exactly the form's **Subject** value. Puppy contact emails use the listing title/name in the creative subject `A little hello about {puppy name} 🐾 | Papillon & Co.`.
 
 This is an ordinary contact-message workflow. It does not generate verification codes or require code expiration. Rate-limit documents store a hashed IP identifier, count, window start, and `expiresAt` timestamp; configure a Firestore TTL policy on `contactRateLimits.expiresAt` to automatically clean up old records. The function reports success only when the SMTP server accepts the message; SMTP acceptance does not guarantee delivery to the inbox instead of spam.
 
@@ -367,9 +369,9 @@ This is an ordinary contact-message workflow. It does not generate verification 
 4. Open **Preferences**, unlock **Contact email**, enter the address that should receive enquiries, and unlock the SMTP fields.
 5. Enter the SMTP host, submission port, and username/email. Enter the SMTP password/app password and save. A complete host, port, username, and password is required the first time.
 6. The saved SMTP password is encrypted with AES-GCM before it is stored in the private Firestore document `privateConfig/sitePreferences`; the password is not returned to the dashboard. Keep `SMTP_ENCRYPTION_KEY` stable. If that key is changed, the existing saved SMTP password cannot be decrypted, and you will need to save the password again under the intended key.
-7. Submit a test message from the homepage contact form. Confirm the email reaches the configured Contact email and the visitor's address appears as Reply-To.
+7. Submit a test message from the homepage contact form and then from a `/contact/{slug}` page. Confirm each reaches the configured Contact email, the visitor's name/email appear in the visible From header, homepage Subject is preserved exactly, and puppy enquiry subjects include the listing name.
 
-The SMTP username is used as the From email, and the displayed sender name is `Papillon & Co.`. The visitor's address is not substituted as the From email; it is used as Reply-To so email providers do not reject a forged sender. The SMTP provider must allow sending from the authenticated account.
+The visitor's form email and name are used in the visible From header, and the SMTP username is used for the SMTP envelope sender. The visitor email is also set as Reply-To. Some SMTP/email providers may apply anti-spoofing or DMARC checks to a visitor address used in From; if your provider rewrites or rejects that visible identity, the deliverability-friendly option is to use the authenticated mailbox in From and keep the visitor address as Reply-To.
 
 ### SMTP connection details
 

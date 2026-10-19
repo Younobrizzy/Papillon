@@ -27,7 +27,7 @@ export async function onRequestPost(context) {
   const email = cleanText(body.email, 254).toLowerCase();
   const enquiryType = cleanText(body.enquiryType, 40);
   const isPuppyContact = enquiryType === 'puppy-contact';
-  const subject = isPuppyContact ? 'Puppy contact request' : cleanText(body.subject, 180);
+  const subject = isPuppyContact ? '' : cleanText(body.subject, 180);
   const message = String(body.message || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, 8000);
   const puppy = cleanText(body.puppy, 100);
   const puppySlug = cleanText(body.puppySlug, 100).toLowerCase();
@@ -85,7 +85,7 @@ export async function onRequestPost(context) {
   try {
     validateSmtpHost(smtp.host);
     const password = await decryptSecret(smtp.passwordCiphertext, smtp.passwordIv, context.env);
-    const verifiedPuppyName = isPuppyContact ? cleanText(listing?.name, 100) : puppy;
+    const verifiedPuppyName = isPuppyContact ? cleanText(listing?.title || listing?.name, 100) : puppy;
     const composedMessage = isPuppyContact
       ? [
           message ? `Additional notes:\n${message}` : '',
@@ -93,12 +93,14 @@ export async function onRequestPost(context) {
           `Preferred payment method: ${preferredPaymentMethod}`
         ].filter(Boolean).join('\n\n')
       : message;
+    const messageSubject = (isPuppyContact
+      ? `A little hello about ${verifiedPuppyName} 🐾 | Papillon & Co.`
+      : subject).slice(0, 220);
     const composed = buildContactEmail({
-      name, email, subject: isPuppyContact ? `Contact request for ${verifiedPuppyName}` : subject,
+      name, email, subject: messageSubject,
       message: composedMessage, puppy: verifiedPuppyName, phone, shippingAddress, shippingAddress2,
       city, region, postalCode, preferredPaymentMethod, puppySlug: isPuppyContact ? puppySlug : ''
     });
-    const messageSubject = `${isPuppyContact ? 'Puppy contact request' : (puppy ? 'Puppy enquiry' : 'Website contact')}: ${isPuppyContact ? verifiedPuppyName : subject}`.slice(0, 220);
     const requestHost = new URL(context.request.url).hostname;
     await sendSmtp({
       host: smtp.host,
@@ -106,11 +108,16 @@ export async function onRequestPost(context) {
       security: smtp.security || (Number(smtp.port) === 465 ? 'ssl' : 'starttls'),
       user: smtp.username,
       password,
-      fromEmail: smtp.username,
-      fromName: 'Papillon & Co.',
+      // Show the visitor's submitted identity in the From header, while using
+      // the authenticated mailbox for the SMTP envelope sender.
+      fromEmail: email,
+      envelopeFromEmail: smtp.username,
+      fromName: name,
       ehloName: /^[a-z0-9.-]+$/i.test(requestHost) ? requestHost : 'localhost',
       payload: {
         to: [recipient],
+        // Explicitly set the sender display name and reply address from the form.
+        name,
         replyTo: email,
         subject: messageSubject,
         message: composed.text,

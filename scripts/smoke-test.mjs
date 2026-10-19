@@ -150,6 +150,11 @@ assert.match(puppyContactHtml, /class="site-header"[\s\S]*class="site-footer"/, 
 assert.match(puppyContactJs, /fetch\('\/api\/puppies\?slug='/, 'puppy contact page should load the selected listing');
 assert.match(contactApiSource, /enquiryType === 'puppy-contact'[\s\S]*getPrivateDocument\(context\.env, `puppies\/\$\{puppySlug\}`\)/, 'server should validate puppy contact submissions against a real listing');
 assert.match(contactEmailSource, /Preferred payment method[\s\S]*Shipping address/, 'contact notification should include structured shipping and payment details');
+assert.match(contactApiSource, /fromEmail:\s*email[\s\S]*envelopeFromEmail:\s*smtp\.username[\s\S]*fromName:\s*name[\s\S]*payload:\s*\{[\s\S]*name,[\s\S]*replyTo:\s*email/, 'contact emails should display the form email/name, set Reply-To to the visitor, and use the configured SMTP account for the envelope');
+assert.match(contactApiSource, /const messageSubject = \(isPuppyContact[\s\S]*A little hello about \$\{verifiedPuppyName\} 🐾[\s\S]*:\s*subject\)/, 'homepage notifications should use the submitted subject and puppy pages should use a creative listing-name subject');
+assert.match(contactApiSource, /listing\?\.title \|\| listing\?\.name/, 'puppy enquiry subject should prefer a listing title and fall back to the listing name');
+const smtpTransportSource = await (await import('node:fs/promises')).readFile(new URL('../functions/lib/smtp.js', import.meta.url), 'utf8');
+assert.match(smtpTransportSource, /envelopeFromEmail[\s\S]*sendMailFrom\(client, envelopeSender\)/, 'SMTP envelope sender should remain separate from the visible From header');
 
 assert.doesNotMatch(puppyHtml, /<small>Coat<\/small>|id="puppy-coat"/, 'puppy detail facts must not show the removed Coat item');
 assert.match(puppyHtml, /id="puppy-gender-icon"[^>]*>⚥<\/span>/, 'gender detail should have its own gender icon');
@@ -176,4 +181,4 @@ const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../f
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
 assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, contact-route middleware rewrite, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
+console.log('Smoke tests passed: SMTP encryption/decryption and sender identity, Firebase private-key parsing, Firebase-authenticated dashboard access, contact routing, contact email subjects, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
