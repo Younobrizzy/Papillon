@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fbf7f0" />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Explore a Papillon puppy profile at Papillon &amp; Co." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Papillon &amp; Co." />
+  <meta property="og:title" content="Meet a Papillon Puppy | Papillon &amp; Co." />
+  <meta property="og:description" content="Explore puppy photos, details, and availability at Papillon &amp; Co." />
+  <meta property="og:url" content="https://pet-project1.pages.dev/" />
+  <meta property="og:image" content="/assets/images/og-image.jpg" />
+  <meta property="og:image:secure_url" content="/assets/images/og-image.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Papillon &amp; Co. — Papillon puppies ready to meet their forever families." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://pet-project1.pages.dev/" />
+  <meta name="twitter:title" content="Meet a Papillon Puppy | Papillon &amp; Co." />
+  <meta name="twitter:description" content="Explore puppy photos, details, and availability at Papillon &amp; Co." />
+  <meta name="twitter:image" content="/assets/images/og-image.jpg" />
+  <meta name="twitter:image:alt" content="Papillon &amp; Co. — Papillon puppies ready to meet their forever families." />
+  <title>Meet a Puppy | Papillon &amp; Co.</title>
+  <link rel="preconnect" href="https://images.pexels.com" />
+  <link rel="preconnect" href="https://puppybase.co" />
+    <link rel="icon" href="/assets/icons/favicon.ico?v=20261017b" />
+  <link rel="shortcut icon" href="/assets/icons/favicon.ico?v=20261017b" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/favicon-48x48.png?v=20261017b" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20261017b" />
+  <link rel="mask-icon" href="/assets/icons/favicon.svg?v=20261017b" color="#D66E55" />
+  <link rel="manifest" href="/assets/icons/site.webmanifest?v=20261017b" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/puppy-detail.css" />
+  <link rel="stylesheet" href="/assets/css/navigation-loading.css" />
+  <script src="/assets/js/navigation-loading.js" defer></script>
+  <script src="/assets/js/puppy-detail.js" defer></script>
+  <script src="/assets/js/contact-form.js" defer></script>
+</head>
+<body class="puppy-detail-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="announcement-bar">
+    <span class="announcement-sparkle" aria-hidden="true">✦</span>
+    <p>A little love is waiting for you <span>— meet our available puppies</span></p>
+    <a href="/#puppies">Meet the pups <span aria-hidden="true">↗</span></a>
+  </div>
+
+  <header class="site-header" id="top">
+    <div class="header-inner container">
+      <a class="brand" href="/" aria-label="Papillon and Co. home"><img class="brand-logo" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a>
+
+      <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="primary-navigation" id="primary-navigation" aria-label="Main navigation">
+        <a class="nav-link" href="/">Home</a>
+        <a class="nav-link active" href="/#puppies">Available puppies</a>
+        <a class="nav-link" href="/#about">About us</a>
+        <a class="nav-link" href="/shipping/">Shipping policy</a>
+        <a class="nav-contact" href="/#contact">Let's talk <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="puppy-profile" hidden>
+      <section class="puppy-profile-hero">
+        <div class="container">
+          <nav class="profile-breadcrumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a><span aria-hidden="true">/</span><a href="/#puppies">Available puppies</a><span aria-hidden="true">/</span><span id="breadcrumb-puppy-name">Puppy profile</span>
+          </nav>
+
+          <div class="profile-hero-grid">
+            <div class="profile-photo-column">
+              <div class="profile-gallery" id="puppy-gallery">
+                <div class="profile-photo-frame" id="gallery-stage" aria-label="Puppy photo gallery">
+                  <button class="gallery-image-trigger" id="gallery-open" type="button" aria-label="Open a larger preview of this puppy's photos">
+                    <img id="puppy-image" src="" alt="Papillon puppy" fetchpriority="high" draggable="false" />
+                  </button>
+                  <button class="gallery-arrow gallery-arrow-prev" id="gallery-prev" type="button" aria-label="Show previous photo"><span aria-hidden="true">‹</span></button>
+                  <button class="gallery-arrow gallery-arrow-next" id="gallery-next" type="button" aria-label="Show next photo"><span aria-hidden="true">›</span></button>
+                  <button class="gallery-zoom-button" id="gallery-zoom" type="button" aria-label="Preview photo in full screen"><span aria-hidden="true">⤢</span></button>
+                  <span class="profile-photo-status"><span aria-hidden="true"></span><span id="puppy-status"></span></span>
+                </div>
+                <div class="gallery-meta-line"><span id="gallery-counter" aria-live="polite">Puppy photos</span><span class="gallery-swipe-hint">Swipe to see more · Tap to enlarge</span></div>
+                <div class="profile-gallery-thumbnails" id="puppy-gallery-thumbnails" role="group" aria-label="Choose a puppy photo"></div>
+              </div>
+              <p class="profile-photo-caption"><span aria-hidden="true">♡</span> Every little personality is one of a kind.</p>
+            </div>
+
+            <div class="profile-summary">
+              <p class="eyebrow"><span class="eyebrow-line"></span> Your potential new best friend</p>
+              <h1>Meet <em id="puppy-name">Puppy</em><span class="profile-title-period">.</span></h1>
+              <p class="profile-gender" id="puppy-gender"></p>
+              <p class="profile-description" id="puppy-description"></p>
+
+              <div class="profile-price-panel">
+                <div><span class="profile-overline">Listed price</span><strong id="puppy-price"></strong><small>Canadian dollars (CAD)</small></div>
+                <span class="profile-price-flower" aria-hidden="true">✿</span>
+              </div>
+
+              <div class="profile-facts" aria-label="Puppy details">
+                <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">◷</span><span><small>Age</small><strong id="puppy-age"></strong></span></div>
+                <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">✿</span><span><small>Coat</small><strong id="puppy-coat"></strong></span></div>
+                <div class="profile-fact"><span class="profile-fact-icon" aria-hidden="true">♡</span><span><small>Personality</small><strong id="puppy-personality-short"></strong></span></div>
+              </div>
+
+              <div class="profile-actions">
+                <a class="button button-primary" id="puppy-enquiry-cta" href="#puppy-enquiry">Ask about this puppy <span aria-hidden="true">↗</span></a>
+                <a class="text-link" href="/#puppies">See all puppies <span aria-hidden="true">→</span></a>
+              </div>
+              <p class="profile-availability-note">Availability may change. Contact us before making arrangements.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-story-section section-padding">
+        <div class="container profile-story-grid">
+          <div class="profile-story-copy">
+            <p class="eyebrow"><span class="eyebrow-line"></span> A little more to love</p>
+            <h2><span id="puppy-story-heading">Meet this puppy</span> <em id="puppy-story-heading-em">your new friend.</em></h2>
+            <p id="puppy-long-description"></p>
+            <h3 class="profile-highlights-heading">Little things to know</h3>
+            <ul class="profile-trait-list" id="puppy-traits"></ul>
+          </div>
+
+          <aside class="profile-help-card">
+            <span class="profile-help-flower" aria-hidden="true">✿</span>
+            <p class="eyebrow">Before you decide</p>
+            <h3>Let's make sure it's the right match.</h3>
+            <p>We'll answer your questions and confirm the details with you, so you can make a thoughtful decision for your family and the puppy.</p>
+            <ul>
+              <li>Confirm availability and final price</li>
+              <li>Ask about care and veterinary records</li>
+              <li>Discuss pickup or travel options</li>
+            </ul>
+            <a class="text-link" href="#puppy-enquiry">Start a conversation <span aria-hidden="true">→</span></a>
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <section class="profile-not-found section-padding" id="puppy-not-found" hidden>
+      <div class="container not-found-inner">
+        <span class="not-found-paw" aria-hidden="true">🐾</span>
+        <p class="eyebrow"><span class="eyebrow-line"></span> A little detour</p>
+        <h1>We can't find that <em>puppy.</em></h1>
+        <p>That puppy profile may have moved or the link may be incorrect. Visit our available puppies to explore the current profiles.</p>
+        <a class="button button-primary" href="/#puppies">Browse available puppies <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="contact-section section-padding profile-enquiry-section" id="puppy-enquiry-section" hidden>
+      <div class="container contact-grid">
+        <div class="contact-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> Take the next little step</p>
+          <h2>Ask us about <em id="enquiry-puppy-name">this puppy</em>.</h2>
+          <p>Have questions about this puppy? Send us a note and we'll help you learn more. The name of the puppy will be included in your enquiry.</p>
+          <div class="contact-note"><span class="contact-note-icon" aria-hidden="true">♡</span><div><strong>No pressure. Just a conversation.</strong><span>Confirm details, ask questions, and see whether it's the right fit.</span></div></div>
+
+        </div>
+
+        <form class="contact-form" id="puppy-enquiry-form" novalidate>
+          <div class="contact-phone-banner" data-contact-phone hidden>
+            <span class="contact-phone-icon" aria-hidden="true">☎</span>
+            <div class="contact-phone-copy"><span>Prefer to call?</span><a data-contact-phone-link href="tel:"></a></div>
+          </div>
+          <div class="form-heading"><span aria-hidden="true">✿</span><div><h3>Send an enquiry</h3><p>We'll include the puppy's name for you.</p></div></div>
+          <div class="form-field"><label for="profile-name">Name <span>*</span></label><input id="profile-name" name="name" type="text" autocomplete="name" placeholder="Your name" required minlength="2" /></div>
+          <div class="form-field"><label for="profile-email">Email <span>*</span></label><input id="profile-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required /></div>
+          <div class="form-field"><label for="profile-subject">Subject <span>*</span></label><input id="profile-subject" name="subject" type="text" placeholder="Enquiry about this puppy" required minlength="2" /></div>
+          <div class="form-field"><label for="profile-message">Message <span>*</span></label><textarea id="profile-message" name="message" rows="4" placeholder="What would you like to know?" required minlength="2"></textarea></div>
+          <button class="button button-primary form-submit" type="submit">Send enquiry <span aria-hidden="true">↗</span></button>
+          <p class="form-privacy">Your enquiry is sent securely through our email service. We will reply to your email address.</p>
+          <p class="form-feedback" id="puppy-form-feedback" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <a class="brand footer-brand" href="/" aria-label="Papillon and Co. home"><img class="brand-logo" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a>
+      <p class="footer-note">For the love of little companions,<br />and the families who adore them.</p>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="/">Home</a><a href="/#puppies">Puppies</a><a href="/#about">Our story</a><a href="/shipping/">Shipping</a><a href="/#contact">Contact</a></nav>
+      <a class="back-top" href="#top" aria-label="Back to top">↑</a>
+    </div>
+    <div class="container footer-bottom"><span class="site-footer-copy">© <span id="year"></span> Papillon &amp; Co. All rights reserved.</span><span>Made with <span class="footer-heart" aria-label="love">♡</span> for little paws.</span></div>
+  </footer>
+
+  <dialog class="puppy-gallery-modal" id="puppy-gallery-modal" aria-label="Puppy photo preview">
+    <div class="gallery-modal-content">
+      <button class="gallery-modal-close" id="gallery-modal-close" type="button" aria-label="Close photo preview">×</button>
+      <button class="gallery-modal-arrow gallery-modal-prev" id="gallery-modal-prev" type="button" aria-label="Show previous photo"><span aria-hidden="true">‹</span></button>
+      <img id="gallery-modal-image" src="" alt="" draggable="false" />
+      <button class="gallery-modal-arrow gallery-modal-next" id="gallery-modal-next" type="button" aria-label="Show next photo"><span aria-hidden="true">›</span></button>
+      <div class="gallery-modal-caption"><span id="gallery-modal-caption">Puppy photo</span><span id="gallery-modal-counter">1 / 3</span></div>
+    </div>
+  </dialog>
+  <script src="/assets/js/public-scripts.js" defer></script>
+</body>
+</html>

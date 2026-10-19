@@ -1,0 +1,12 @@
+{
+  "name": "papillon-and-co-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Papillon & Co. website and Cloudflare Pages Functions",
+  "scripts": {
+    "dev:static": "node scripts/dev-server.cjs",
+    "validate": "node scripts/validate-project.mjs",
+    "test": "node scripts/smoke-test.mjs"
+  }
+}

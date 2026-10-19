@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 150" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">Papillon &amp; Co. — Little dogs, big love</title>
+  <desc id="logo-desc">Light Papillon &amp; Co. wordmark for dark backgrounds.</desc>
+  <g fill="#E17D62" transform="translate(4 24) scale(1.02)">
+  <path d="M46.8 46.7C39.9 35.4 31.4 15.5 16.7 7.9 8.2 3.5 2.5 8.6 5.1 19.3 8.8 33.9 27.1 44.1 46.8 49.1Z" />
+  <path d="M53.2 46.7C60.1 35.4 68.6 15.5 83.3 7.9 91.8 3.5 97.5 8.6 94.9 19.3 91.2 33.9 72.9 44.1 53.2 49.1Z" />
+  <path d="M46.5 53.3C34.2 52.2 16.6 53.3 7.3 64.4 1.1 71.8 5.2 81.9 16.6 79.8 30.8 77.2 41.2 64.8 46.5 53.3Z" />
+  <path d="M53.5 53.3C65.8 52.2 83.4 53.3 92.7 64.4 98.9 71.8 94.8 81.9 83.4 79.8 69.2 77.2 58.8 64.8 53.5 53.3Z" />
+</g>
+  <text x="126" y="76" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="700" letter-spacing="-1.8" fill="#FBF7F0">Papillon <tspan fill="#E17D62" font-style="italic" font-weight="500">&amp;</tspan><tspan fill="#FBF7F0"> Co.</tspan></text>
+  <text x="130" y="113" font-family="DM Sans, Arial, sans-serif" font-size="15.5" font-weight="500" letter-spacing="4.1" fill="#D9DED4">LITTLE DOGS, BIG LOVE</text>
+</svg>

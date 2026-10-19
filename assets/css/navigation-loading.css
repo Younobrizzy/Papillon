@@ -1,0 +1,109 @@
+.site-navigation-loader {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  box-sizing: border-box;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: hidden;
+  background: #fbf7f0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .18s ease, visibility 0s linear .18s;
+}
+
+.site-navigation-loader.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .18s ease, visibility 0s;
+}
+
+/* Content sits directly on the full-screen overlay; there is no card or panel. */
+.navigation-loader-content {
+  width: min(310px, 100%);
+  text-align: center;
+  transform: translateY(8px);
+  transition: transform .2s ease;
+}
+
+.site-navigation-loader.is-visible .navigation-loader-content {
+  transform: translateY(0);
+}
+
+.navigation-loader-spinner {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 17px;
+  border: 2px solid #eadfd3;
+  border-top-color: #d66e55;
+  border-right-color: #d66e55;
+  border-radius: 50%;
+  animation: papillon-loader-spin .9s linear infinite;
+}
+
+.navigation-loader-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  animation: papillon-loader-counterspin .9s linear infinite;
+}
+
+.navigation-loader-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.navigation-loader-brand {
+  margin: 0;
+  color: #26372e;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -.045em;
+  line-height: 1.2;
+}
+
+.navigation-loader-brand i {
+  color: #d66e55;
+  font-weight: 500;
+}
+
+.navigation-loader-message {
+  margin: 8px 0 0;
+  color: #68736a;
+  font-size: 12px;
+  letter-spacing: .015em;
+}
+
+@keyframes papillon-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes papillon-loader-counterspin {
+  to { transform: rotate(-360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-navigation-loader,
+  .navigation-loader-content { transition-duration: .01ms; }
+  .navigation-loader-spinner,
+  .navigation-loader-mark { animation-duration: 1.8s; }
+}

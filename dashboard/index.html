@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#26372e" />
+
+
+
+
+
+
+
+
+
+
+<meta name="robots" content="noindex, nofollow" />
+  <title>Dashboard | Papillon &amp; Co.</title>
+    <link rel="icon" href="/assets/icons/favicon.ico?v=20261017b" />
+  <link rel="shortcut icon" href="/assets/icons/favicon.ico?v=20261017b" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png?v=20261017b" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/favicon-48x48.png?v=20261017b" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20261017b" />
+  <link rel="mask-icon" href="/assets/icons/favicon.svg?v=20261017b" color="#D66E55" />
+  <link rel="manifest" href="/assets/icons/site.webmanifest?v=20261017b" />
+  <link rel="stylesheet" href="/assets/css/navigation-loading.css" />
+  <link rel="stylesheet" href="/assets/css/dashboard.css" />
+  <script src="/assets/js/navigation-loading.js" defer></script>
+  <script type="module" src="/assets/js/dashboard.js"></script>
+</head>
+<body class="dashboard-page">
+  <section class="login-screen" id="login-screen" aria-labelledby="login-title">
+    <aside class="login-story" aria-label="Papillon and Co. welcome">
+      <div class="login-story-overlay"></div>
+      <div class="login-story-content">
+        <p class="login-story-kicker"><span aria-hidden="true">✦</span> PAPILLON &amp; CO. OWNER SPACE</p>
+        <h2>Little paws.<br><em>Big love.</em></h2>
+        <p>Make every puppy's next chapter a special one. Keep your listings beautiful, your details up to date, and your little family ready to meet its forever homes.</p>
+        <div class="login-story-note"><span aria-hidden="true">✿</span><span>Thoughtfully cared for. Lovingly shared.</span></div>
+      </div>
+      <span class="login-story-credit">A little place for your little family.</span>
+    </aside>
+
+    <div class="login-panel">
+      <div class="login-panel-inner">
+        <a class="login-brand" href="/" aria-label="Papillon & Co. home"><img class="brand-lockup" src="/assets/images/brand/papillon-logo.svg?v=20261017b" alt="Papillon &amp; Co. — Little dogs, big love" width="310" height="75" decoding="async" /></a>
+
+        <form class="login-card" id="login-form" novalidate>
+          <div class="login-card-main">
+            <p class="eyebrow">OWNER ACCESS</p>
+            <h1 id="login-title">Welcome <em>back.</em></h1>
+            <p class="login-description">Sign in to manage your puppy listings and site preferences.</p>
+            <div class="login-field">
+              <label for="login-email">Email address</label>
+              <input id="login-email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required />
+            </div>
+            <div class="login-field">
+              <label for="login-password">Password</label>
+              <div class="password-field">
+                <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+                <button class="password-toggle" id="password-toggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+              </div>
+            </div>
+            <p class="login-error" id="login-error" role="alert" hidden></p>
+          </div>
+          <div class="login-card-bottom">
+            <button class="primary-button login-submit" id="login-submit" type="submit">
+              <span class="login-submit-label">Continue</span>
+              <span class="login-submit-arrow" aria-hidden="true">↗</span>
+              <span class="login-submit-spinner" aria-hidden="true"></span>
+            </button>
+            <a class="back-home" href="/">← Back to website</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div class="dashboard-app" id="dashboard-app" hidden>
+    <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="Close menu" tabindex="-1"></button>
+    <aside class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Dashboard sidebar">
+      <a class="sidebar-brand" href="/" aria-label="Papillon & Co. website">
+        <span class="brand-mark" aria-hidden="true"><img src="/assets/images/brand/papillon-mark.svg?v=20261017b" alt="" width="52" height="52" decoding="async" /></span>
+        <span class="brand-type"><strong>Papillon <i>&amp;</i> Co.</strong><small>OWNER DASHBOARD</small></span>
+      </a>
+
+      <nav class="sidebar-main-nav" aria-label="Main dashboard navigation">
+        <button class="sidebar-nav-link is-active" type="button" data-view="listings" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="7" height="7" rx="1.2"/><rect x="13.5" y="4" width="7" height="7" rx="1.2"/><rect x="3.5" y="14" width="7" height="7" rx="1.2"/><rect x="13.5" y="14" width="7" height="7" rx="1.2"/></svg><span>Listings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="sidebar-nav-link" type="button" data-view="preferences">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.8-.1 1.7 1.7 0 0 0-.9 1.5v.2H8.8v-.2a1.7 1.7 0 0 0-.9-1.5 1.7 1.7 0 0 0-1.8.1l-.2.1-1.7-2.9.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-.9H3v-3.4h.2a1.7 1.7 0 0 0 1.5-.9 1.7 1.7 0 0 0-.3-1.9l-.1-.1L6 5l.2.1a1.7 1.7 0 0 0 1.8.1 1.7 1.7 0 0 0 .9-1.5v-.2h6.4v.2a1.7 1.7 0 0 0 .9 1.5 1.7 1.7 0 0 0 1.8-.1l.2-.1 1.7 2.9-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5.9h.2v3.4H21a1.7 1.7 0 0 0-1.6 1.4Z"/></svg><span>Preferences</span>
+        </button>
+        <button class="sidebar-nav-link sidebar-logout" id="logout-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open dashboard menu" aria-expanded="false" aria-controls="dashboard-sidebar"><span></span><span></span><span></span></button>
+        <div class="topbar-context"><span class="topbar-kicker">PAPILLON &amp; CO.</span><strong id="topbar-title">Listings</strong></div>
+        <div class="topbar-user"><span class="user-email" id="user-email">Owner</span></div>
+      </header>
+
+      <main class="dashboard-content">
+        <section class="dashboard-view" id="listings-view" aria-labelledby="listings-title">
+          <div class="page-heading">
+            <div><p class="eyebrow">YOUR LITTLE FAMILY</p><h1 id="listings-title">Puppy <em>listings.</em></h1><p class="page-description">Create, update, and manage the puppies shown on your website.</p></div>
+            <button class="primary-button add-listing-button" id="add-listing-button" type="button"><span aria-hidden="true">＋</span> Add listing</button>
+          </div>
+          <div class="listings-summary"><span class="summary-mark" aria-hidden="true">✿</span><div><strong id="listing-count">3 listings</strong><span>Your available puppy profiles, all in one place.</span></div></div>
+          <div class="listing-list" id="listing-list" aria-live="polite"></div>
+        </section>
+
+
+        <section class="dashboard-view listing-editor-view" id="listing-editor-view" aria-labelledby="listing-editor-title" hidden>
+          <div class="page-heading editor-page-heading">
+            <div><p class="eyebrow" id="listing-editor-kicker">PUPPY PROFILE</p><h1 id="listing-editor-title">Add a <em>listing.</em></h1><p class="page-description" id="listing-editor-description">Add the details and photos for a puppy.</p></div>
+            <button class="secondary-button editor-back-button" type="button" id="cancel-listing-button">← Back to listings</button>
+          </div>
+          <form id="listing-form" class="listing-editor-form" novalidate>
+      <input type="hidden" id="listing-original-slug" />
+      <div class="form-grid">
+        <div class="dashboard-field"><label for="listing-name">Puppy name</label><input id="listing-name" name="name" required placeholder="e.g. Maple" autocomplete="off" /></div>
+        <div class="dashboard-field"><label for="listing-gender">Gender</label><select id="listing-gender" name="gender" required><option value="Male">Male</option><option value="Female">Female</option></select></div>
+        <div class="dashboard-field"><label for="listing-age">Age</label><input id="listing-age" name="age" required placeholder="10 weeks" /></div>
+        <div class="dashboard-field"><label for="listing-price">Price (CAD)</label><input id="listing-price" name="price" type="number" min="0" step="1" required placeholder="1800" /></div>
+        <div class="dashboard-field field-full"><label for="listing-status">Availability</label><select id="listing-status" name="status"><option value="Looking for a home">Looking for a home</option><option value="Reserved">Reserved</option><option value="Unavailable">Unavailable</option></select></div>
+
+        <div class="dashboard-field field-full">
+          <label for="listing-image-file">Cover image</label>
+          <input class="upload-input" id="listing-image-file" name="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" aria-describedby="cover-upload-help" />
+          <div class="image-dropzone" id="cover-dropzone">
+            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
+            <div class="upload-copy"><strong>Drop your cover photo here</strong><span>or choose an image from your device</span><small id="cover-upload-help">JPG, PNG, WebP, GIF or AVIF · Up to 15 MB</small></div>
+            <button class="upload-select-button" type="button" id="cover-browse-button">Choose photo</button>
+          </div>
+          <div class="cover-image-preview upload-preview" id="cover-image-preview" hidden>
+            <img id="cover-preview-image" alt="Cover image preview" />
+            <div class="upload-preview-copy"><strong id="cover-preview-name">Cover photo selected</strong><span id="cover-preview-meta">Ready to use</span></div>
+            <button class="remove-upload-button" type="button" id="remove-cover-image" aria-label="Remove cover image">×</button>
+          </div>
+        </div>
+
+        <div class="dashboard-field field-full">
+          <label for="listing-gallery-files">Gallery images</label>
+          <input class="upload-input" id="listing-gallery-files" name="galleryFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple aria-describedby="gallery-upload-help" />
+          <div class="image-dropzone gallery-dropzone" id="gallery-dropzone">
+            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span>
+            <div class="upload-copy"><strong>Add gallery photos</strong><span>Drop multiple images here or browse your device</span><small id="gallery-upload-help">Up to 8 gallery images · Images are optimized automatically</small></div>
+            <button class="upload-select-button" type="button" id="gallery-browse-button">Add photos</button>
+          </div>
+          <div class="gallery-upload-heading" id="gallery-upload-heading" hidden><span>Selected photos</span><span id="gallery-photo-count">0 of 8</span></div>
+          <div class="gallery-image-grid" id="gallery-image-grid" aria-live="polite"></div>
+        </div>
+
+        <div class="dashboard-field field-full"><label for="listing-details">Full description</label><textarea id="listing-details" name="details" rows="4" placeholder="Share a little about this puppy and what makes them special."></textarea></div>
+      </div>
+      <p class="form-error" id="listing-form-error" role="alert" hidden></p>
+      <div class="editor-actions"><button class="secondary-button" type="button" id="cancel-listing-button-bottom">Cancel</button><button class="primary-button" type="submit" id="save-listing-button">Save listing <span aria-hidden="true">↗</span></button></div>
+    </form>
+        </section>
+
+        <section class="dashboard-view preferences-view" id="preferences-view" aria-labelledby="preferences-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">SITE SETUP</p><h1 id="preferences-title">Preferen<em>ces.</em></h1><p class="page-description">Manage your site preferences and outgoing email settings.</p></div></div>
+          <form class="preferences-form" id="preferences-form" novalidate>
+            <div class="preferences-field-list">
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-email">Contact email</label><button class="field-lock-toggle" type="button" data-lock-target="preference-email" aria-label="Unlock contact email" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-email" name="email" type="email" placeholder="hello@example.com" autocomplete="email" disabled />
+              </div>
+              <div class="preferences-subheading field-full"><span class="preferences-subheading-mark" aria-hidden="true">⌘</span><div><h2>Page details &amp; social preview</h2><p>These values are added to the first HTML response so search engines and social media can read them immediately.</p></div></div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-site-title">Site title</label><button class="field-lock-toggle" type="button" data-lock-target="preference-site-title" aria-label="Unlock site title" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-site-title" name="siteTitle" type="text" maxlength="120" placeholder="Papillon &amp; Co. — Little dogs, big love" disabled />
+              </div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-site-branding">Brand / site name</label><button class="field-lock-toggle" type="button" data-lock-target="preference-site-branding" aria-label="Unlock brand name" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-site-branding" name="siteBranding" type="text" maxlength="80" placeholder="Papillon &amp; Co." disabled />
+              </div>
+              <div class="dashboard-field locked-field field-full">
+                <div class="field-label-row"><label for="preference-site-description">Site description</label><button class="field-lock-toggle" type="button" data-lock-target="preference-site-description" aria-label="Unlock site description" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <textarea id="preference-site-description" name="siteDescription" rows="3" maxlength="400" placeholder="Meet our charming Papillon puppies, raised with care and ready to find their forever homes." disabled></textarea>
+              </div>
+              <div class="dashboard-field locked-field field-full">
+                <div class="field-label-row"><label for="preference-site-og-image-file">Default social preview image</label><button class="field-lock-toggle" type="button" data-lock-target="preference-site-og-image-file" aria-label="Unlock social preview image" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-site-og-image-file" name="siteOgImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" disabled />
+                <div class="upload-preview cover-image-preview" id="preference-site-og-image-preview" hidden>
+                  <img id="preference-site-og-image-preview-image" alt="Social preview image preview" />
+                  <div class="upload-preview-copy"><strong id="preference-site-og-image-preview-title">Social preview image</strong><span id="preference-site-og-image-preview-size">JPEG, 1200 × 630 recommended. Maximum 240 KB after compression.</span></div>
+                  <button class="small-action" type="button" id="preference-site-og-image-remove" disabled>Remove</button>
+                </div>
+                <p class="dashboard-help-text">Used for homepage and general-page shares. Puppy links use each puppy's own main photo. Images are converted to JPEG and compressed to 240 KB or less.</p>
+              </div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-phone-number">Public contact phone number</label><button class="field-lock-toggle" type="button" data-lock-target="preference-phone-number" aria-label="Unlock contact phone number" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-phone-number" name="phoneNumber" type="tel" autocomplete="tel" inputmode="tel" maxlength="32" placeholder="+237 6XX XXX XXX" aria-describedby="preference-phone-number-help" disabled />
+                <p class="dashboard-help-text" id="preference-phone-number-help">Saved publicly in the Firestore document <code>siteConfig/public</code> as <code>phoneNumber</code>. When set, it appears at the top of the homepage and puppy enquiry forms.</p>
+              </div>
+              <div class="dashboard-field locked-field field-full">
+                <div class="field-label-row"><label for="preference-script">Public site script / live chat</label><button class="field-lock-toggle" type="button" data-lock-target="preference-script" aria-label="Unlock script" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <textarea id="preference-script" name="script" rows="6" spellcheck="false" placeholder="Paste your live chat provider script snippet" aria-describedby="preference-script-help" disabled></textarea>
+                <p class="dashboard-help-text" id="preference-script-help">Saved in the public Firestore document <code>siteConfig/public</code> and loaded on the homepage, puppy profile pages, and shipping page only. The script is not loaded on the dashboard or 404 page. Only paste scripts from providers you trust. Maximum size: 48 KB.</p>
+              </div>
+              <div class="preferences-subheading"><span class="preferences-subheading-mark" aria-hidden="true">✉</span><div><h2>SMTP setup</h2><p>Configure outgoing email. Credentials are encrypted and stored server-side; the saved password is never sent back to this page.</p></div></div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-smtp-host">SMTP host</label><button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-host" aria-label="Unlock SMTP host" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-smtp-host" name="smtpHost" type="text" placeholder="smtp.example.com" autocomplete="off" disabled />
+              </div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-smtp-port">SMTP port</label><button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-port" aria-label="Unlock SMTP port" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-smtp-port" name="smtpPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="587" disabled />
+              </div>
+              <div class="dashboard-field locked-field">
+                <div class="field-label-row"><label for="preference-smtp-username">SMTP username</label><button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-username" aria-label="Unlock SMTP username" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-smtp-username" name="smtpUsername" type="text" autocomplete="off" placeholder="your-smtp-username" disabled />
+              </div>
+              <div class="dashboard-field locked-field field-full">
+                <div class="field-label-row"><label for="preference-smtp-password">SMTP password</label><button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-password" aria-label="Unlock SMTP password" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
+                <input id="preference-smtp-password" name="smtpPassword" type="password" autocomplete="new-password" placeholder="Enter SMTP password" aria-describedby="smtp-password-help" disabled />
+              </div>
+              <p class="dashboard-help-text field-full" id="smtp-password-help">After saving, the password field is cleared. Leave it blank to keep the saved password; enter a new one only to change it.</p>
+            </div>
+            <div class="form-actions"><button class="primary-button" type="submit">Save preferences <span aria-hidden="true">↗</span></button><p class="form-feedback" id="preferences-feedback" role="status" aria-live="polite"></p></div>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="dashboard-dialog confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+    <div class="confirm-icon" aria-hidden="true">?</div>
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p id="confirm-message">Please confirm this action.</p>
+    <div class="dialog-actions"><button class="secondary-button" type="button" id="confirm-cancel">Cancel</button><button class="primary-button" type="button" id="confirm-accept">Confirm</button></div>
+  </dialog>
+  <div class="dashboard-toast" id="dashboard-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
