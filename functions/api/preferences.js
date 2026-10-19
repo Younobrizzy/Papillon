@@ -1,5 +1,5 @@
 import { encryptSecret } from '../lib/crypto.js';
-import { jsonResponse, readAdminSession, sameOriginRequest, validEmail, cleanText } from '../lib/admin-session.js';
+import { jsonResponse, readFirebaseSession, sameOriginRequest, validEmail, cleanText } from '../lib/admin-session.js';
 import { validateSmtpHost } from '../lib/smtp.js';
 import { readPublicSiteScript, readPublicSiteOgImage, writePublicSiteScript } from '../lib/public-site-script.js';
 import { getPrivateDocument, setPrivateDocument } from '../lib/private-firestore.js';
@@ -7,7 +7,7 @@ import { getPrivateDocument, setPrivateDocument } from '../lib/private-firestore
 const PRIVATE_PREFERENCES_PATH = 'privateConfig/sitePreferences';
 
 export async function onRequestGet(context) {
-  if (!await readAdminSession(context.request, context.env)) return jsonResponse({ error: 'Sign in to manage preferences.' }, 401);
+  if (!await readFirebaseSession(context.request, context.env)) return jsonResponse({ error: 'Sign in to manage preferences.' }, 401);
   let saved;
   try {
     saved = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH);
@@ -58,7 +58,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   if (!sameOriginRequest(context.request)) return jsonResponse({ error: 'Request origin is not allowed.' }, 403);
-  if (!await readAdminSession(context.request, context.env)) return jsonResponse({ error: 'Your Firebase administrator authorization has expired. Please sign in again.' }, 401);
+  if (!await readFirebaseSession(context.request, context.env)) return jsonResponse({ error: 'Your Firebase sign-in has expired or is no longer valid. Please sign in again.' }, 401);
   let body;
   try {
     const raw = await context.request.text();

@@ -6,8 +6,7 @@ Use this checklist with `README.md` before making the site public.
 
 - [ ] Select the intended Firebase project and create the default Firestore database.
 - [ ] Enable **Authentication → Email/Password**.
-- [ ] Create the owner account in Firebase Authentication and copy its UID.
-- [ ] Create `admins/{UID}` in Firestore with `role` (string) = `administrator` and `active` (boolean) = `true`.
+- [ ] Create the Firebase Authentication accounts that should be able to sign in to the dashboard. No `admins` collection or per-user allowlist document is required.
 - [ ] Deploy `config/firestore.rules`. The rules intentionally deny all browser SDK reads/writes; server-side service-account calls use Google Cloud IAM.
 - [ ] Create/use a dedicated service account with the required Firestore data access. Keep its JSON key private.
 
@@ -25,7 +24,7 @@ Use this checklist with `README.md` before making the site public.
 ## C. Dashboard and Preferences
 
 - [ ] Open `/api/config`; it should return the six browser Firebase config values and must not return service-account credentials.
-- [ ] Open `/dashboard/`, sign in with the Firebase owner account, and confirm the active `admins/{UID}` record authorizes access.
+- [ ] Open `/dashboard/` and confirm any active Firebase Authentication account can sign in without a matching Firestore role document. Confirm account creation is limited to the people you intend to grant full dashboard access.
 - [ ] Save the contact email and SMTP host, port, username, and password in Preferences. Re-save these values after migrating from the old KV-backed version; no automatic KV migration occurs.
 - [ ] Keep `SMTP_ENCRYPTION_KEY` unchanged after saving SMTP settings. Changing it makes the previously saved SMTP password unreadable.
 - [ ] Save public site title, branding, description, phone number, and optional social preview image.

@@ -28,7 +28,7 @@ The root folder intentionally keeps the entry-point files and Cloudflare Pages c
 ## Features
 
 - Responsive homepage, Shipping Policy page, puppy profiles, and a custom 404 page.
-- Dashboard sign-in through Firebase Authentication (email/password), with server-side authorization against a Firestore `admins/{uid}` allowlist. No custom dashboard email/password Cloudflare variables or app-managed login cookie are used.
+- Dashboard sign-in through Firebase Authentication (email/password). Any active Firebase Authentication user can access the dashboard; no `admins` collection or role document is required. No custom dashboard email/password Cloudflare variables or app-managed login cookie are used.
 - Firestore-backed puppy create, read, update, and delete operations. No puppy demo records are bundled or seeded.
 - One main JPEG photo per listing and up to eight gallery photos, each independently compressed to no more than **240 KiB (245,760 bytes)** before save and checked again by the server.
 - Clean puppy URLs such as `/little-puppy`; every listing uses the shared `puppy.html` template.
@@ -88,13 +88,13 @@ Use the contents of this folder as the project root.
 | --- | --- |
 | `functions/_middleware.js` | Rewrites HTML metadata and inserts the configured phone number before returning supported public pages |
 | `functions/api/config.js` | Returns the six Firebase Web SDK config values from environment variables at `GET /api/config` |
-| `functions/api/admin-session.js` | Verifies Firebase Auth users and reports administrator authorization; no custom password or cookie session |
-| `functions/api/puppies.js` | Public listing reads and Firebase-admin-protected listing create/update/delete operations in Firestore |
-| `functions/api/preferences.js` | Reads/saves private Preferences and public site config; requires Firebase administrator authorization |
+| `functions/api/admin-session.js` | Verifies Firebase Authentication users for dashboard access; no role document, custom password, or cookie session |
+| `functions/api/puppies.js` | Public listing reads and Firebase-authenticated listing create/update/delete operations in Firestore |
+| `functions/api/preferences.js` | Reads/saves private Preferences and public site config; requires a valid Firebase Authentication sign-in |
 | `functions/api/public-scripts.js` | Public read-only endpoint for the phone number and live-chat/site snippet |
 | `functions/api/contact.js` | Validates a contact/enquiry form, rate-limits submissions, and sends SMTP email |
 | `functions/api/og-image.js` | Serves the custom site or individual puppy JPEG social image |
-| `functions/lib/admin-session.js` | Validates Firebase ID tokens, checks Firestore `admins/{uid}` authorization, same-origin checks, and safe text helpers |
+| `functions/lib/admin-session.js` | Validates Firebase ID tokens, same-origin checks, and safe text helpers; no Firestore role check |
 | `functions/lib/private-firestore.js` | Reads/writes private Firestore settings and transactionally rate-limits contact submissions; replaces Cloudflare KV |
 | `config/firestore.rules` | Default-deny rules for browser Firestore access; server-side service-account requests use IAM |
 | `functions/lib/crypto.js` | AES-GCM encryption/decryption of the stored SMTP password |
@@ -121,21 +121,21 @@ An unknown puppy slug renders the shared profile template, which displays a not-
 | Method and path | Access | Purpose |
 | --- | --- | --- |
 | `GET /api/config` | Public | Returns Firebase Web configuration. Requires all six `FIREBASE_*` web-config values. |
-| `GET /api/admin-session` | Firebase ID token | Verifies the current Firebase user and checks the `admins/{uid}` allowlist. |
+| `GET /api/admin-session` | Firebase ID token | Verifies the current Firebase Authentication user; no allowlist lookup is performed. |
 | `POST /api/admin-session` | Firebase ID token + same origin | Optional verification endpoint; does not accept a password or issue a custom cookie. |
 | `DELETE /api/admin-session` | Same origin | Legacy-compatible no-op confirmation; Firebase SDK performs actual sign-out in the browser. |
 | `GET /api/puppies` | Public read | Returns public puppy listings. |
 | `GET /api/puppies?slug=<slug>` | Public read | Returns one puppy and its gallery by slug. |
-| `POST /api/puppies` | Firebase administrator authorization + same origin | Creates or updates a listing and its gallery documents. |
-| `DELETE /api/puppies?slug=<slug>` | Firebase administrator authorization + same origin | Deletes a listing and its gallery documents. |
-| `GET /api/preferences` | Firebase administrator authorization | Loads Preferences. The SMTP password is never returned. |
-| `POST /api/preferences` | Firebase administrator authorization + same origin | Saves private email/SMTP values and public Firestore site settings. |
+| `POST /api/puppies` | Valid Firebase Authentication sign-in + same origin | Creates or updates a listing and its gallery documents. |
+| `DELETE /api/puppies?slug=<slug>` | Valid Firebase Authentication sign-in + same origin | Deletes a listing and its gallery documents. |
+| `GET /api/preferences` | Valid Firebase Authentication sign-in | Loads Preferences. The SMTP password is never returned. |
+| `POST /api/preferences` | Valid Firebase Authentication sign-in + same origin | Saves private email/SMTP values and public Firestore site settings. |
 | `GET /api/public-scripts` | Public read | Returns `script`, `phoneNumber`, and update metadata; never returns SMTP secrets. |
 | `GET /api/og-image` | Public read | Serves the custom site social image or redirects to the built-in fallback. |
 | `GET /api/og-image?slug=<slug>` | Public read | Serves the main image for one puppy listing as JPEG bytes. |
 | `POST /api/contact` | Same-origin public form submission | Validates and delivers a contact or puppy enquiry email. |
 
-Admin mutation endpoints require a valid Firebase ID token belonging to a UID explicitly authorized by Firestore, plus an allowed same-origin request for mutations. Firestore operations are made server-side using the service account. The browser never receives the service-account private key.
+Dashboard mutation endpoints require a valid Firebase ID token from any active Firebase Authentication account, plus an allowed same-origin request for mutations. Every signed-in account can create/update/delete puppy listings and modify dashboard Preferences, including contact-recipient and SMTP settings. Firestore operations are made server-side using the service account. The browser never receives the service-account private key.
 
 ## Deploy to Cloudflare Pages
 
@@ -168,7 +168,7 @@ Follow [Firebase and Firestore setup](#firebase-and-firestore-setup). The site n
 
 ### 6. Configure Firebase Authentication dashboard access
 
-Follow [Firebase Authentication dashboard access](#firebase-authentication-dashboard-access). Enable Email/Password sign-in, create the owner account in Firebase Authentication, and add that account UID to the Firestore administrator allowlist. Do not create `PAPILLON_ADMIN_EMAIL` or `PAPILLON_ADMIN_PASSWORD` variables; the dashboard no longer uses them.
+Follow [Firebase Authentication dashboard access](#firebase-authentication-dashboard-access). Enable Email/Password sign-in and create Firebase Authentication accounts for users who should have dashboard access. No `admins` collection or per-user Firestore document is required.
 
 ### 7. Configure email
 
@@ -217,28 +217,18 @@ No Cloudflare KV binding is required. The six Firebase Web configuration values 
 
 ### Firebase Authentication dashboard access
 
-The dashboard signs in with Firebase Authentication and authorizes administrators using a Firestore allowlist. It does **not** use `PAPILLON_ADMIN_EMAIL`, `PAPILLON_ADMIN_PASSWORD`, or a custom eight-hour login cookie.
+The dashboard uses Firebase Authentication (email/password). **Any active Firebase Authentication account can sign in and use the dashboard.** The application does not query an `admins` collection, and it does not require any per-user role document in Firestore.
 
 1. In the Firebase console, select project **`papillonandco-98c22`**.
-2. Open **Authentication → Sign-in method** and enable **Email/Password**. You do not need to add an account-registration form to the public website.
-3. Open **Authentication → Users** and select **Add user**. Create the owner/admin account with the email and password you want to use on `/dashboard/`.
-4. Open the new user and copy its **UID**.
-5. Open **Firestore Database → Data**. Create a collection named `admins` if it does not exist. Create a document whose **document ID is exactly the Firebase Authentication UID**.
-6. Add these fields to that document:
+2. Open **Authentication → Sign-in method** and enable **Email/Password**.
+3. Open **Authentication → Users** and create an account for each person who should be able to use the dashboard. Sign in at `/dashboard/` with that account.
+4. In **Authentication → Settings → Authorized domains**, make sure the Cloudflare Pages domain and any custom production domain are listed.
+5. In Cloudflare Pages → **Settings → Variables and Secrets**, add the six Firebase Web/project values as regular **Variables** and add `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `SMTP_ENCRYPTION_KEY` as **Secrets**. The project ID must match the Firebase project used by Authentication and Firestore.
+6. Redeploy the Pages project and sign in with any active Firebase Authentication account. The backend verifies the ID token through Firebase Authentication; it does not read an `admins` collection.
 
-   | Field | Type | Value |
-   | --- | --- | --- |
-   | `role` | string | `administrator` |
-   | `active` | boolean | `true` |
+**Access impact:** every Firebase Authentication user who can sign in can manage puppy listings and galleries, site metadata, the public phone number/live-chat script, contact email, and SMTP settings. The dashboard does not include an account-registration screen. Create only the intended users in Firebase Authentication; if your project permits self-service sign-up, any newly created account would also receive dashboard access, so restrict account creation separately if you do not want that. No `PAPILLON_ADMIN_EMAIL` or `PAPILLON_ADMIN_PASSWORD` variables are used.
 
-7. In **Authentication → Settings → Authorized domains**, make sure your Cloudflare Pages domain and any custom production domain are listed.
-8. In Cloudflare Pages → **Settings → Variables and Secrets**, add the six Firebase Web/project values as regular **Variables** and add `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `SMTP_ENCRYPTION_KEY` as **Secrets**. The project ID must match the Firebase project used by Authentication and Firestore.
-9. Ensure the service account has permission to read the Firestore database, including the `admins` collection, and to perform the listing/site-settings operations this application uses.
-10. Redeploy the Pages project. Visit `/dashboard/` and sign in with the Firebase user created in step 3. The backend validates the Firebase ID token and then checks `admins/{uid}`; a valid Firebase user without the matching active administrator document is denied.
-
-**Do not create `PAPILLON_ADMIN_EMAIL` or `PAPILLON_ADMIN_PASSWORD`.** If you previously configured them, they are no longer used by the updated code and may be removed from Cloudflare after this version is deployed.
-
-The dashboard sends the current Firebase ID token as an `Authorization: Bearer ...` header to protected API endpoints. The backend verifies the token through Firebase's Identity Toolkit and checks the Firestore admin allowlist using the server-side service account. Local storage is used only for UI convenience and is never accepted as proof of authorization.
+The dashboard sends the current Firebase ID token as an `Authorization: Bearer ...` header to protected API endpoints. The backend checks that Firebase recognizes the token and account. Local storage is used only for UI convenience and is never accepted as proof of authorization.
 
 ## Firebase and Firestore setup
 
@@ -267,7 +257,7 @@ Review the rules file before deploying it if this Firebase project is shared wit
 
 ### 4. Verify the configuration
 
-After deploy, test `GET /api/puppies`. With valid Firestore settings and no listing documents, it should return an empty list, not sample puppies. If it returns a configuration error, inspect the variable names and service-account key format. Add the first real puppy using the dashboard after Firebase administrator access is configured.
+After deploy, test `GET /api/puppies`. With valid Firestore settings and no listing documents, it should return an empty list, not sample puppies. If it returns a configuration error, inspect the variable names and service-account key format. Add the first real puppy using the dashboard after signing in with any active Firebase Authentication account.
 
 ## Puppy listings and images
 
@@ -459,7 +449,7 @@ Run `npm run validate` from the project root first. It checks required project f
 | `GET /api/config` says `Missing configuration: FIREBASE_...` | Add all six Web config variables from the Firebase Web app settings, then redeploy. This endpoint is separate from service-account access. |
 | `/api/puppies` returns 503 or says Firestore is not configured | Check `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`, including the full PKCS#8 PEM and newline formatting. Verify Cloudflare deployed the latest environment configuration. |
 | Firestore returns permission/access errors | Make sure the service account belongs to the same Google Cloud project and has a Firestore data role allowing the operations used by this site. |
-| Dashboard says the Firebase account is not authorized | Confirm Email/Password is enabled, the six Web config variables are correct, and Firestore contains `admins/{the exact Firebase UID}` with `role="administrator"` and `active=true`. Check `FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` and the Pages Function logs if verification fails. |
+| Dashboard sign-in is rejected | Confirm Email/Password is enabled, the six Firebase Web config variables are correct, the account is enabled in Firebase Authentication, and `/api/admin-session` returns a successful authenticated response. No `admins` Firestore document is required. Check the Firebase API key and Pages Function logs if verification fails. |
 | Preferences or contact form says storage is unavailable | Check `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`, confirm the service account can access Firestore, and inspect Pages Function logs. No KV binding is required. |
 | Saved SMTP password cannot be decrypted | `SMTP_ENCRYPTION_KEY` likely changed since the password was saved. Restore the original key, or set the intended key and re-enter/re-save the SMTP password. |
 | SMTP connection/authentication fails | Verify the SMTP host, provider port, username, app password, TLS requirements, and sender permission. Port 465 uses SSL/TLS; 587/2525 typically use STARTTLS; port 25 is unsupported. |
@@ -497,15 +487,15 @@ Decorative hero/about photos and their crop versions live under `assets/images/s
 
 - Keep `FIREBASE_PRIVATE_KEY` and `SMTP_ENCRYPTION_KEY` as server-side Cloudflare secrets. Do not put them in HTML, JavaScript, public Firestore fields, or the live-chat snippet.
 - Keep `privateConfig/sitePreferences` and `contactRateLimits` inaccessible to browser clients through Firestore Security Rules. Server-side Pages Functions access these documents with the service account. No Cloudflare KV binding is used.
-- Dashboard authorization uses Firebase Authentication ID tokens and the private server-side Firestore `admins/{uid}` allowlist. Do not rely on localStorage for access control. Sign in over HTTPS in production and log out on shared devices.
+- Dashboard access uses valid Firebase Authentication ID tokens. No Firestore `admins` allowlist is used. Do not rely on localStorage for access control. Sign in over HTTPS in production and log out on shared devices.
 - The SMTP password is encrypted at rest with AES-GCM. Do not change `SMTP_ENCRYPTION_KEY` without a planned credential re-encryption or reset.
 - The `siteConfig/public` values, phone number and live-chat snippet are public configuration by design. Assume anyone can retrieve the configured snippet and phone number. Do not save secrets there.
-- A live-chat snippet can execute arbitrary provider JavaScript on the pages where it is included. Only administrators should be allowed to edit it, and only trusted provider code should be pasted.
-- Firestore writes are server-side and mutations require a valid Firebase ID token and an active Firestore administrator record. Do not make public `POST`/`DELETE` listing APIs unauthenticated.
+- A live-chat snippet can execute arbitrary provider JavaScript on the pages where it is included. Any signed-in dashboard user can edit it, so only trusted provider code should be pasted.
+- Firestore writes are server-side and mutations require a valid Firebase ID token from any active Firebase Authentication account. Every user who can sign in can manage puppy listings, public site settings, contact recipient details, and SMTP settings. Do not make public `POST`/`DELETE` listing APIs unauthenticated.
 - Contact submissions are constrained by validation, same-origin checking, a bot-trap field, body-size limits, and a short rate-limit window, but you should still monitor usage and provider logs.
 - Use a test deployment for large changes, keep a known-good deployment available for rollback, and test a real enquiry after changing SMTP or secrets.
 - Use images and puppy descriptions truthfully, and review all public listing details before publication.
 
 ## Alternative hosting
 
-Cloudflare Pages is the supported production host because it runs the `functions/` backend alongside the static frontend. This project intentionally does not include an Apache/cPanel rewrite file: moving it to another host requires implementing equivalent server-side handling for Firestore access, Firebase Authentication verification and administrator authorization, Preferences storage, social metadata middleware, the social image endpoint, and SMTP delivery. The included `node scripts/dev-server.cjs` is only for visual/static preview and is not a production backend.
+Cloudflare Pages is the supported production host because it runs the `functions/` backend alongside the static frontend. This project intentionally does not include an Apache/cPanel rewrite file: moving it to another host requires implementing equivalent server-side handling for Firestore access, Firebase Authentication verification, Preferences storage, social metadata middleware, the social image endpoint, and SMTP delivery. The included `node scripts/dev-server.cjs` is only for visual/static preview and is not a production backend.

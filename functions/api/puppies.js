@@ -1,4 +1,4 @@
-import { cleanText, jsonResponse, readAdminSession, sameOriginRequest } from '../lib/admin-session.js';
+import { cleanText, jsonResponse, readFirebaseSession, sameOriginRequest } from '../lib/admin-session.js';
 
 const MAX_IMAGE_BYTES = 240 * 1024;
 const MAX_GALLERY_IMAGES = 8;
@@ -281,15 +281,15 @@ async function getPuppy(env, slug, includeGallery = true) {
   return puppy;
 }
 
-function getAdminError(context) {
+function getMutationOriginError(context) {
   if (!sameOriginRequest(context.request)) return jsonResponse({ error: 'Request origin is not allowed.' }, 403);
   return null;
 }
 
-async function authorizeAdmin(context) {
-  const originError = getAdminError(context);
+async function authorizeDashboardUser(context) {
+  const originError = getMutationOriginError(context);
   if (originError) return { response: originError };
-  const session = await readAdminSession(context.request, context.env);
+  const session = await readFirebaseSession(context.request, context.env);
   if (!session) return { response: jsonResponse({ error: 'Sign in to the dashboard before managing puppy listings.' }, 401) };
   return { session };
 }
@@ -328,7 +328,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost(context) {
-  const auth = await authorizeAdmin(context);
+  const auth = await authorizeDashboardUser(context);
   if (auth.response) return auth.response;
   const { request, env } = context;
   try {
@@ -413,7 +413,7 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestDelete(context) {
-  const auth = await authorizeAdmin(context);
+  const auth = await authorizeDashboardUser(context);
   if (auth.response) return auth.response;
   const { request, env } = context;
   try {

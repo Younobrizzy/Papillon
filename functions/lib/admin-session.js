@@ -71,34 +71,20 @@ export async function getFirestoreAccessToken(env) {
   return cachedGoogleToken;
 }
 
-async function isAdministrator(uid, env) {
-  const projectId = String(env.FIREBASE_PROJECT_ID || '').trim();
-  if (!projectId) throw new Error('FIREBASE_PROJECT_ID is not configured.');
-  const token = await getFirestoreAccessToken(env);
-  const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/admins/${encodeURIComponent(uid)}`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-  if (response.status === 404) return false;
-  if (!response.ok) throw new Error(`Firestore administrator lookup failed with status ${response.status}.`);
-  const document = await response.json().catch(() => ({}));
-  const fields = document.fields || {};
-  return fields.role?.stringValue === 'administrator' && fields.active?.booleanValue === true;
-}
-
 /**
- * A request is authenticated only when its Firebase ID token is valid and the
- * matching Firestore admins/{uid} document explicitly grants administrator access.
- * This deliberately does not trust localStorage or browser-supplied email values.
+ * Any active Firebase Authentication account with a valid ID token can use the
+ * dashboard. No Firestore role/allowlist document is required. LocalStorage and
+ * browser-supplied email values are never accepted as proof of authentication.
  */
-export async function readAdminSession(request, env) {
+export async function readFirebaseSession(request, env) {
   const idToken = getBearerToken(request);
   if (!idToken) return null;
   try {
     const user = await verifyFirebaseIdToken(idToken, env);
     if (!user) return null;
-    if (!await isAdministrator(user.uid, env)) return null;
     return { uid: user.uid, email: user.email };
   } catch (error) {
-    console.error('[Papillon Firebase Auth] Admin authentication failed:', error?.message || error);
+    console.error('[Papillon Firebase Auth] Sign-in verification failed:', error?.message || error);
     return null;
   }
 }

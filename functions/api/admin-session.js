@@ -1,11 +1,11 @@
-import { jsonResponse, readAdminSession, sameOriginRequest } from '../lib/admin-session.js';
+import { jsonResponse, readFirebaseSession, sameOriginRequest } from '../lib/admin-session.js';
 
 export async function onRequestGet({ request, env }) {
-  const session = await readAdminSession(request, env);
+  const session = await readFirebaseSession(request, env);
   if (!session) {
     return jsonResponse({
       authenticated: false,
-      error: 'This Firebase account is not authorized for the dashboard. Confirm that the user exists in Firebase Authentication and has an admins/{UID} Firestore document with role="administrator" and active=true.'
+      error: 'Your Firebase sign-in could not be verified. Sign in with an active Firebase Authentication account and try again.'
     }, 401);
   }
   return jsonResponse({ authenticated: true, email: session.email, uid: session.uid });
@@ -15,8 +15,8 @@ export async function onRequestGet({ request, env }) {
 // Passwords are never sent to this endpoint; Firebase handles credential checks.
 export async function onRequestPost(context) {
   if (!sameOriginRequest(context.request)) return jsonResponse({ error: 'Request origin is not allowed.' }, 403);
-  const session = await readAdminSession(context.request, context.env);
-  if (!session) return jsonResponse({ authenticated: false, error: 'This Firebase account is not authorized for the dashboard.' }, 401);
+  const session = await readFirebaseSession(context.request, context.env);
+  if (!session) return jsonResponse({ authenticated: false, error: 'Your Firebase sign-in could not be verified. Sign in again.' }, 401);
   return jsonResponse({ authenticated: true, email: session.email, uid: session.uid });
 }
 

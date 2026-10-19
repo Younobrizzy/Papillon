@@ -707,7 +707,7 @@
             };
         savedSmtpPasswordExists = cameFromServer && Boolean(result.preferences.smtp && result.preferences.smtp.hasPassword);
       } else if (response.status === 401) {
-        feedback.textContent = 'Your Firebase administrator authorization could not be verified. Sign in again to manage preferences.';
+        feedback.textContent = 'Your Firebase sign-in could not be verified. Sign in again to manage preferences.';
         feedback.classList.add('error');
       } else {
         feedback.textContent = result.error || 'Server preferences are not available yet. Check the Firebase service-account configuration, then save these settings.';
@@ -941,7 +941,7 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.authenticated) {
         await signOut(auth).catch(() => {});
-        throw new Error(result.error || 'This Firebase account does not have dashboard administrator access.');
+        throw new Error(result.error || 'Your Firebase sign-in could not be verified. Sign in again.');
       }
       localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedIn: true, email: result.email || credential.user.email }));
       passwordInput.value = '';
@@ -1034,23 +1034,24 @@
         try {
           const response = await apiFetch('/api/admin-session', { cache: 'no-store' });
           const result = await response.json().catch(() => ({}));
-          if (!response.ok || !result.authenticated || !result.email) {
+          if (!response.ok || !result.authenticated) {
             localStorage.removeItem(SESSION_KEY);
             await signOut(auth).catch(() => {});
             showLogin();
             if (loginError) {
-              loginError.textContent = result.error || 'This Firebase account does not have dashboard administrator access.';
+              loginError.textContent = result.error || 'Your Firebase sign-in could not be verified. Sign in again.';
               loginError.hidden = false;
             }
             return;
           }
-          localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedIn: true, email: result.email }));
+          currentEmail = result.email || user.email || user.uid || '';
+          localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedIn: true, email: currentEmail }));
           showApp();
         } catch (error) {
           localStorage.removeItem(SESSION_KEY);
           showLogin();
           if (loginError) {
-            loginError.textContent = error.message || 'Firebase administrator verification failed. Check the Cloudflare Functions and Firestore service-account configuration.';
+            loginError.textContent = error.message || 'Firebase sign-in verification failed. Check the Cloudflare Pages Functions and Firebase configuration.';
             loginError.hidden = false;
           }
         }

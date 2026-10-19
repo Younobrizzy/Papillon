@@ -53,6 +53,13 @@ for (const file of staticHtml) {
     if (!fs.existsSync(diskPath)) errors.push(`Broken local HTML asset reference in ${path.relative(root, file)}: ${raw}`);
   }
 }
+const runtimeAuthSources = files
+  .filter(file => /\.(?:m?js|cjs)$/.test(file) && !file.endsWith('README.md'))
+  .map(file => fs.readFileSync(file, 'utf8'))
+  .join('\n');
+if (/documents\/admins\/|isAdministrator\s*\(|readAdminSession\s*\(/.test(runtimeAuthSources)) {
+  errors.push('Firestore role-allowlist code must not be present; dashboard access uses Firebase Authentication only.');
+}
 const sourceFiles = files.filter(file => /\.(?:m?js|cjs)$/.test(file));
 for (const file of sourceFiles) {
   const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
