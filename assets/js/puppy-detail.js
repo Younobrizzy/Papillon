@@ -247,6 +247,8 @@
         const numericPrice = Number(record.price);
         const priceText = 'C$' + new Intl.NumberFormat('en-CA', { maximumFractionDigits: 0 }).format(Number.isFinite(numericPrice) ? numericPrice : 0);
         puppy = {
+          // Keep the listing slug so puppy-specific links use the current record URL.
+          slug: record.slug || slug,
           name: record.name || 'Puppy',
           gender: record.gender || '',
           age: record.age || '',
