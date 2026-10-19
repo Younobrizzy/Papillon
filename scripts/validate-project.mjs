@@ -87,6 +87,7 @@ const middlewareSource = fs.readFileSync(path.join(root, 'functions/_middleware.
 if (!middlewareSource.includes("new URL('/contact/index.html', incomingUrl)") || !middlewareSource.includes('isPuppyContactRoute && isDocumentRequest')) errors.push('Puppy contact routes must be rewritten by middleware to the shared contact page.');
 if (!contactPageHtml.includes('name="shippingAddress"') || !contactPageHtml.includes('name="preferredPaymentMethod"') || !contactPageHtml.includes('class="site-header"') || !contactPageHtml.includes('class="site-footer"')) errors.push('Puppy contact page must include shipping/payment fields and the shared site header/footer.');
 if (!contactPageJs.includes("fetch('/api/puppies?slug='") || !contactPageJs.includes("enquiryType: 'puppy-contact'")) errors.push('Puppy contact page must load the listing and submit a structured contact request.');
+if (!contactPageJs.includes('document.body?.dataset?.contactSlug') || !middlewareSource.includes("element.setAttribute('data-contact-slug', contactSlug)")) errors.push('Puppy contact pages must pass the original route slug to the shared template.');
 const puppyHtml = fs.readFileSync(path.join(root, 'puppy.html'), 'utf8');
 const puppyDetailJs = fs.readFileSync(path.join(root, 'assets/js/puppy-detail.js'), 'utf8');
 const navigationLoaderJs = fs.readFileSync(path.join(root, 'assets/js/navigation-loading.js'), 'utf8');

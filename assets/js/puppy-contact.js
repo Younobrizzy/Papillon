@@ -8,9 +8,51 @@
   const submitButton = form?.querySelector('button[type="submit"]');
   const originalButton = submitButton?.innerHTML || '';
   const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
-  const slugMatch = /^\/contact\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/i.exec(window.location.pathname);
-  const slug = slugMatch ? slugMatch[1].toLowerCase() : '';
   const byId = id => document.getElementById(id);
+
+  function normalizePuppySlug(value) {
+    let candidate = String(value || '').trim();
+    try { candidate = decodeURIComponent(candidate); } catch (_) { /* keep the original value */ }
+    candidate = candidate.toLowerCase();
+    return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(candidate) ? candidate : '';
+  }
+
+  function resolvePuppySlug() {
+    // The site middleware stamps the original route slug onto the rendered template.
+    // This remains reliable even if the host serves the shared contact/index.html asset.
+    const serverSlug = normalizePuppySlug(document.body?.dataset?.contactSlug);
+    if (serverSlug) return serverSlug;
+
+    const pathMatch = /^\/contact(?:\/([^/]+))?\/?$/i.exec(window.location.pathname);
+    const pathSlug = normalizePuppySlug(pathMatch?.[1]);
+    if (pathSlug && pathSlug !== 'index.html') return pathSlug;
+
+    const query = new URLSearchParams(window.location.search);
+    const querySlug = normalizePuppySlug(query.get('slug') || query.get('puppySlug'));
+    if (querySlug) return querySlug;
+
+    // Recovery for a contact link opened from a puppy profile if the host strips
+    // the route suffix. Never use a referrer from another origin.
+    try {
+      const referrer = new URL(document.referrer);
+      if (referrer.origin === window.location.origin) {
+        const segments = referrer.pathname.split('/').filter(Boolean);
+        if (segments[0]?.toLowerCase() === 'contact') {
+          const fromContact = normalizePuppySlug(segments[1]);
+          if (fromContact && fromContact !== 'index.html') return fromContact;
+        } else if (segments.length) {
+          const finalSegment = segments[segments.length - 1];
+          if (!finalSegment.includes('.') && !['dashboard', 'shipping', 'admin', 'api', 'contact'].includes(finalSegment.toLowerCase())) {
+            const fromPuppyProfile = normalizePuppySlug(finalSegment);
+            if (fromPuppyProfile) return fromPuppyProfile;
+          }
+        }
+      }
+    } catch (_) { /* direct entry with no usable referrer */ }
+    return '';
+  }
+
+  const slug = resolvePuppySlug();
   const putText = (id, value) => { const element = byId(id); if (element) element.textContent = value || ''; };
   const ready = () => {
     document.body.removeAttribute('aria-busy');

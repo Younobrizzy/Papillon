@@ -20,7 +20,9 @@ function tidyText(value, maxLength = 400) {
 }
 
 function safeSlug(value) {
-  const slug = String(value || '').trim().toLowerCase();
+  let slug = String(value || '').trim();
+  try { slug = decodeURIComponent(slug); } catch (_) { /* keep the original value */ }
+  slug = slug.toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '';
 }
 
@@ -60,8 +62,9 @@ function resolveListingSlug(pathname, url) {
 }
 
 function resolveContactSlug(pathname) {
-  const match = /^\/contact\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/i.exec(pathname);
-  return match ? safeSlug(match[1]) : '';
+  const match = /^\/contact\/([^/]+)\/?$/i.exec(pathname);
+  if (!match || /^index\.html$/i.test(match[1])) return '';
+  return safeSlug(match[1]);
 }
 
 function normalizePhone(value) {
@@ -89,7 +92,7 @@ export async function onRequest(context) {
   // Because this middleware runs site-wide, rewrite puppy contact URLs here
   // so the shared HTML template is served while the original URL is preserved.
   const incomingUrl = new URL(context.request.url);
-  const isPuppyContactRoute = /^\/contact\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/i.test(incomingUrl.pathname);
+  const isPuppyContactRoute = Boolean(resolveContactSlug(incomingUrl.pathname));
   const isDocumentRequest = context.request.method === 'GET' || context.request.method === 'HEAD';
   const requestForNext = isPuppyContactRoute && isDocumentRequest
     ? new Request(new URL('/contact/index.html', incomingUrl), context.request)
@@ -179,7 +182,10 @@ export async function onRequest(context) {
     .on('link[rel="canonical"]', { element(element) { element.setAttribute('href', canonicalUrl); } })
     .on('.brand-logo', { element(element) { element.setAttribute('alt', siteBranding); } })
     .on('.brand', { element(element) { element.setAttribute('aria-label', `${siteBranding} home`); } })
-    .on('.site-footer-copy', { element(element) { element.setInnerContent(`© ${new Date().getFullYear()} ${siteBranding}. All rights reserved.`); } });
+    .on('.site-footer-copy', { element(element) { element.setInnerContent(`© ${new Date().getFullYear()} ${siteBranding}. All rights reserved.`); } })
+    .on('body', { element(element) {
+      if (isPuppyContact && contactSlug) element.setAttribute('data-contact-slug', contactSlug);
+    } });
 
   if (phone) {
     rewriter

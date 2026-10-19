@@ -133,6 +133,7 @@ const contactRouteResponse = await socialMetadataMiddleware({
 });
 assert.equal(new URL(rewrittenContactRequestUrl).pathname, '/contact/index.html', 'contact route must rewrite to the shared HTML template in middleware');
 assert.equal(contactRouteResponse.status, 200, 'contact route middleware should return the shared template response');
+assert.match((await import('node:fs/promises')).readFile ? await (await import('node:fs/promises')).readFile(new URL('../functions/_middleware.js', import.meta.url), 'utf8') : '', /element\.setAttribute\('data-contact-slug', contactSlug\)/, 'middleware should stamp the original slug on the served contact template');
 const puppyContactHtml = await (await import('node:fs/promises')).readFile(new URL('../contact/index.html', import.meta.url), 'utf8');
 const puppyContactJs = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-contact.js', import.meta.url), 'utf8');
 const contactApiSource = await (await import('node:fs/promises')).readFile(new URL('../functions/api/contact.js', import.meta.url), 'utf8');
