@@ -13,7 +13,7 @@ export async function onRequestGet(context) {
     saved = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH);
   } catch (error) {
     console.error('Could not read private Preferences from Firestore:', error);
-    return jsonResponse({ error: error?.message || 'Private Preferences could not be loaded from Firestore. Check the service-account configuration.' }, error?.status || 503);
+    return jsonResponse({ error: 'Preferences could not be loaded. Please try again later.' }, error?.status || 503);
   }
   const preferences = saved && typeof saved === 'object' ? saved : {};
   let publicScript = String(preferences.script || '');
@@ -96,7 +96,7 @@ export async function onRequestPost(context) {
     existing = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH) || {};
   } catch (error) {
     console.error('Could not read existing private Preferences from Firestore:', error);
-    return jsonResponse({ error: error?.message || 'Could not read existing Preferences from Firestore.' }, error?.status || 503);
+    return jsonResponse({ error: 'Existing Preferences could not be read. Please try again.' }, error?.status || 503);
   }
   const submittedSmtp = body?.smtp && typeof body.smtp === 'object' ? body.smtp : {};
   const host = cleanText(submittedSmtp.host, 253).toLowerCase().replace(/\.$/, '');
@@ -144,7 +144,7 @@ export async function onRequestPost(context) {
     await writePublicSiteScript(context.env, script, phoneNumber, { siteTitle, siteBranding, siteDescription, siteOgImage });
   } catch (error) {
     console.error('Could not save public site script to Firestore:', error);
-    return jsonResponse({ error: error?.message || 'Could not save the public script document. Check the Firestore service-account configuration and permissions.' }, error?.status || 503);
+    return jsonResponse({ error: 'The site settings could not be saved. Please check the values and try again.' }, error?.status || 503);
   }
 
   // Private contact recipient and encrypted SMTP credentials live in a separate
@@ -154,7 +154,7 @@ export async function onRequestPost(context) {
     await setPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH, preferences);
   } catch (error) {
     console.error('Could not save private Preferences to Firestore:', error);
-    return jsonResponse({ error: error?.message || 'Could not save private Preferences to Firestore. Check service-account permissions.' }, error?.status || 503);
+    return jsonResponse({ error: 'Preferences could not be saved. Please check the server configuration and try again.' }, error?.status || 503);
   }
-  return jsonResponse({ success: true, message: 'Preferences saved to Firestore. Private contact and SMTP settings are stored separately from public site settings.' });
+  return jsonResponse({ success: true, message: 'Preferences saved successfully.' });
 }

@@ -79,4 +79,13 @@ try {
   globalThis.fetch = originalFetch;
 }
 
+
+// Dashboard-facing copy must not expose internal storage implementation details.
+const dashboardHtml = await (await import('node:fs/promises')).readFile(new URL('../dashboard/index.html', import.meta.url), 'utf8');
+const dashboardScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/dashboard.js', import.meta.url), 'utf8');
+const preferencesApi = await (await import('node:fs/promises')).readFile(new URL('../functions/api/preferences.js', import.meta.url), 'utf8');
+assert.doesNotMatch(dashboardHtml, /firestore/i, 'dashboard HTML copy should not mention the storage backend');
+assert.doesNotMatch(dashboardScript, /firestore/i, 'dashboard script should not expose the storage backend in UI copy or labels');
+assert.doesNotMatch(preferencesApi, /message:\s*['"]Preferences saved to Firestore/i, 'preferences success feedback should not mention the storage backend');
+
 console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, and Firebase-authenticated dashboard access without an admins document.');

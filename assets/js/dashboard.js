@@ -69,12 +69,12 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !Array.isArray(result.puppies)) {
-        throw new Error(result.error || 'Unable to load listings from Firestore. Check the Cloudflare Firebase service-account settings.');
+        throw new Error(result.error || 'Unable to load puppy listings. Please try again.');
       }
       listings = result.puppies;
     } catch (error) {
       listings = [];
-      listingsError = error.message || 'Unable to load listings from Firestore.';
+      listingsError = error.message || 'Unable to load puppy listings.';
     } finally {
       listingsLoading = false;
       renderListings();
@@ -88,11 +88,11 @@
       cache: 'no-store'
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.puppy) throw new Error(result.error || 'Unable to load this puppy from Firestore.');
+    if (!response.ok || !result.puppy) throw new Error(result.error || 'Unable to load this puppy.');
     return result.puppy;
   }
 
-  async function savePuppyToFirestore(item) {
+  async function savePuppyListing(item) {
     const response = await apiFetch('/api/puppies', {
       method: 'POST',
       credentials: 'same-origin',
@@ -100,7 +100,7 @@
       body: JSON.stringify(item)
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save this puppy to Firestore.');
+    if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save this puppy.');
     return result.puppy;
   }
 
@@ -210,7 +210,7 @@
       const empty = document.createElement('div');
       empty.className = 'empty-listings';
       if (listingsLoading) {
-        empty.innerHTML = '<div class="empty-icon" aria-hidden="true">✿</div><h2>Loading listings…</h2><p>Connecting to your Firestore puppy collection.</p>';
+        empty.innerHTML = '<div class="empty-icon" aria-hidden="true">✿</div><h2>Loading listings…</h2><p>Loading your puppy listings.</p>';
         listingList.appendChild(empty);
         return;
       }
@@ -224,7 +224,7 @@
         listingList.appendChild(empty);
         return;
       }
-      empty.innerHTML = '<div class="empty-icon" aria-hidden="true">✿</div><h2>No puppy listings yet</h2><p>Add your first puppy to start building your little family page. Listings are saved in Firestore and will appear on the public website.</p>';
+      empty.innerHTML = '<div class="empty-icon" aria-hidden="true">✿</div><h2>No puppy listings yet</h2><p>Add your first puppy to start building your little family page. Your listings will appear on the public website.</p>';
       const button = document.createElement('button');
       button.type = 'button'; button.className = 'primary-button'; button.textContent = '＋ Add listing';
       button.addEventListener('click', () => openListingEditor());
@@ -608,14 +608,14 @@
     const existingIndex = listings.findIndex(entry => entry.slug === originalSlug);
     const saveButton = $('#save-listing-button');
     const originalButtonText = saveButton ? saveButton.innerHTML : '';
-    if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving to Firestore…'; }
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving…'; }
     try {
-      await savePuppyToFirestore(item);
+      await savePuppyListing(item);
       await refreshListings();
       showView('listings');
-      showToast(existingIndex >= 0 ? 'Listing updated in Firestore.' : 'Listing created in Firestore.');
+      showToast(existingIndex >= 0 ? 'Listing updated.' : 'Listing created.');
     } catch (error) {
-      listingFormError.textContent = error.message || 'Unable to save the listing to Firestore. Check the Cloudflare service-account settings.';
+      listingFormError.textContent = error.message || 'Unable to save the listing. Please try again.';
       listingFormError.hidden = false;
     } finally {
       if (saveButton) { saveButton.disabled = false; saveButton.innerHTML = originalButtonText; }
@@ -625,15 +625,15 @@
   function requestDelete(slug) {
     const item = listings.find(entry => entry.slug === slug);
     if (!item) return;
-    openConfirmation({ title: 'Delete this listing?', message: 'This will permanently remove ' + item.name + ' and its gallery images from Firestore.', acceptText: 'Delete listing', dangerous: true, action: async () => {
+    openConfirmation({ title: 'Delete this listing?', message: 'This will permanently remove ' + item.name + ' and its gallery images.', acceptText: 'Delete listing', dangerous: true, action: async () => {
       try {
         const response = await apiFetch('/api/puppies?slug=' + encodeURIComponent(slug), {
           method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json' }
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) throw new Error(result.error || 'Unable to delete this puppy from Firestore.');
+        if (!response.ok || !result.success) throw new Error(result.error || 'Unable to delete this puppy.');
         await refreshListings();
-        showToast('Listing deleted from Firestore.');
+        showToast('Listing deleted.');
       } catch (error) {
         showToast(error.message || 'Unable to delete listing.');
       }
@@ -692,8 +692,7 @@
       const result = await response.json().catch(() => ({}));
       if (response.ok && result.preferences) {
         cameFromServer = Boolean(result.configured);
-        // Public fields (metadata, phone number, social image, and script) always come from Firestore.
-        // Private contact email and SMTP settings are loaded from a separate protected Firestore document.
+        // Public website settings are loaded separately from private contact and SMTP settings.
         preferences = cameFromServer
           ? result.preferences
           : {

@@ -1,4 +1,4 @@
-/* Loads the administrator-managed public site snippet from Firestore through
+/* Loads the administrator-managed public site snippet through
    /api/public-scripts and executes valid script tags from the saved snippet. */
 (() => {
   if (window.__papillonPublicScriptsStarted) return;

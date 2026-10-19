@@ -41,7 +41,7 @@ export async function onRequestPost(context) {
     }
   } catch (error) {
     console.error('Contact form rate limit check failed:', error);
-    return jsonResponse({ error: 'The contact form is temporarily unavailable. Check Firestore server configuration and try again later.' }, 503);
+    return jsonResponse({ error: 'The contact form is temporarily unavailable. Please try again later.' }, 503);
   }
 
   let preferences;

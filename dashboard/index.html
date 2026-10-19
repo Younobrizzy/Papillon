@@ -199,12 +199,12 @@
               <div class="dashboard-field locked-field">
                 <div class="field-label-row"><label for="preference-phone-number">Public contact phone number</label><button class="field-lock-toggle" type="button" data-lock-target="preference-phone-number" aria-label="Unlock contact phone number" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
                 <input id="preference-phone-number" name="phoneNumber" type="tel" autocomplete="tel" inputmode="tel" maxlength="32" placeholder="+237 6XX XXX XXX" aria-describedby="preference-phone-number-help" disabled />
-                <p class="dashboard-help-text" id="preference-phone-number-help">Saved publicly in the Firestore document <code>siteConfig/public</code> as <code>phoneNumber</code>. When set, it appears at the top of the homepage and puppy enquiry forms.</p>
+                <p class="dashboard-help-text" id="preference-phone-number-help">When set, it appears at the top of the homepage and puppy enquiry forms.</p>
               </div>
               <div class="dashboard-field locked-field field-full">
                 <div class="field-label-row"><label for="preference-script">Public site script / live chat</label><button class="field-lock-toggle" type="button" data-lock-target="preference-script" aria-label="Unlock script" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span><span class="lock-toggle-label">Unlock</span></button></div>
                 <textarea id="preference-script" name="script" rows="6" spellcheck="false" placeholder="Paste your live chat provider script snippet" aria-describedby="preference-script-help" disabled></textarea>
-                <p class="dashboard-help-text" id="preference-script-help">Saved in the public Firestore document <code>siteConfig/public</code> and loaded on the homepage, puppy profile pages, and shipping page only. The script is not loaded on the dashboard or 404 page. Only paste scripts from providers you trust. Maximum size: 48 KB.</p>
+                <p class="dashboard-help-text" id="preference-script-help">Loaded on the homepage, puppy profile pages, and shipping page only. It is not loaded on the dashboard or 404 page. Only paste scripts from providers you trust. Maximum size: 48 KB.</p>
               </div>
               <div class="preferences-subheading"><span class="preferences-subheading-mark" aria-hidden="true">✉</span><div><h2>SMTP setup</h2><p>Configure outgoing email. Credentials are encrypted and stored server-side; the saved password is never sent back to this page.</p></div></div>
               <div class="dashboard-field locked-field">

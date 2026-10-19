@@ -69,8 +69,7 @@
     });
   }
 
-  // Public listing pagination. All records still come from Firestore; only the
-  // visible slice is rendered on each page.
+  // Public listing pagination. Only the current page slice is rendered at a time.
   const puppyGrid = document.getElementById('puppy-grid');
   const puppyPagination = document.getElementById('puppy-pagination');
   const puppyPaginationSummary = document.getElementById('puppy-pagination-summary');

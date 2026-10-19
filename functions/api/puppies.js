@@ -272,19 +272,25 @@ async function authorizeDashboardUser(context) {
 }
 
 function errorResponse(error, fallback) {
-  console.error('[Papillon Firestore puppy API]', error?.message || error);
+  // Keep implementation details in server logs; return plain, non-technical messages to the UI.
+  console.error('[Papillon puppy API]', error?.message || error);
   const status = Number(error?.status);
-  if (status === 400 || status === 401 || status === 403 || status === 404 || status === 413) {
-    return jsonResponse({ error: status === 403 ? 'The Firestore service account does not have permission to access this database.' : (error.message || fallback) }, status);
+  const message = String(error?.message || '');
+  const isInternalServiceError = /firestore|google oauth|service[- ]account|datastore|googleapis|access token/i.test(message);
+  if (status === 403) {
+    return jsonResponse({ error: 'The request could not be completed. Please try again later.' }, 403);
   }
-  if (status === 503) return jsonResponse({ error: error.message || 'Firestore server configuration is missing.' }, 503);
+  if ([400, 401, 404, 413].includes(status)) {
+    return jsonResponse({ error: isInternalServiceError ? fallback : (message || fallback) }, status);
+  }
+  if (status === 503) return jsonResponse({ error: fallback }, 503);
   return jsonResponse({ error: fallback }, 500);
 }
 
 export async function onRequestGet({ request, env }) {
   try {
     if (missingServiceConfig(env)) {
-      return jsonResponse({ error: 'Firestore is not configured. Add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Cloudflare.' }, 503);
+      return jsonResponse({ error: 'Puppy listings are temporarily unavailable. Please try again later.' }, 503);
     }
     const url = new URL(request.url);
     const slug = url.searchParams.get('slug');
@@ -300,7 +306,7 @@ export async function onRequestGet({ request, env }) {
       .sort((a, b) => a.name.localeCompare(b.name));
     return jsonResponse({ puppies });
   } catch (error) {
-    return errorResponse(error, 'Unable to load puppy listings from Firestore. Check the Cloudflare Firebase service-account settings and Firestore permissions.');
+    return errorResponse(error, 'Unable to load puppy listings. Please try again later.');
   }
 }
 
@@ -385,7 +391,7 @@ export async function onRequestPost(context) {
     })) };
     return jsonResponse({ success: true, puppy: savedPuppy });
   } catch (error) {
-    return errorResponse(error, 'Unable to save the puppy listing. Check the Firestore configuration and try again.');
+    return errorResponse(error, 'Unable to save the puppy listing. Please try again.');
   }
 }
 
@@ -404,6 +410,6 @@ export async function onRequestDelete(context) {
     await commitWrites(env, writes);
     return jsonResponse({ success: true });
   } catch (error) {
-    return errorResponse(error, 'Unable to delete the puppy listing from Firestore.');
+    return errorResponse(error, 'Unable to delete the puppy listing. Please try again.');
   }
 }

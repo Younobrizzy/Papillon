@@ -222,7 +222,7 @@
         };
       }
     } catch (_) {
-      // A missing API or Firestore connection is treated as unavailable, not as demo data.
+      // A missing API connection is treated as unavailable, not as demo data.
     }
 
   if (!puppy) {
