@@ -507,7 +507,7 @@ Cloudflare Pages is the supported production host because it runs the `functions
 ### Puppy contact pages
 
 - Each puppy detail page's **Contact us about this puppy** button opens `/contact/{listing-slug}`.
-- Cloudflare Pages rewrites `/contact/*` to the shared `contact/index.html` template; the page fetches the selected listing from `/api/puppies?slug=...` and displays its image, name, age, and price.
+- The site-wide Pages middleware rewrites `/contact/{listing-slug}` internally to the shared `contact/index.html` template while preserving the original URL; this is done in middleware because Pages `_redirects` rules do not apply when a Pages Function handles the request. The page fetches the selected listing from `/api/puppies?slug=...` and displays its image, name, age, and price.
 - The form collects contact details, a shipping address, and a preferred payment method. This is an enquiry only: it does not collect card/bank credentials or process payment.
 - Submissions use the existing `/api/contact` endpoint and configured SMTP delivery, with the listing and structured shipping/payment preferences included in the notification email.
 - The server verifies that the referenced puppy document still exists before sending the enquiry.

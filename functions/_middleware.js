@@ -85,7 +85,16 @@ function formatPuppyDescription(puppy, fallback) {
 }
 
 export async function onRequest(context) {
-  const response = await context.next();
+  // Pages `_redirects` rules are skipped whenever a Pages Function matches.
+  // Because this middleware runs site-wide, rewrite puppy contact URLs here
+  // so the shared HTML template is served while the original URL is preserved.
+  const incomingUrl = new URL(context.request.url);
+  const isPuppyContactRoute = /^\/contact\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/i.test(incomingUrl.pathname);
+  const isDocumentRequest = context.request.method === 'GET' || context.request.method === 'HEAD';
+  const requestForNext = isPuppyContactRoute && isDocumentRequest
+    ? new Request(new URL('/contact/index.html', incomingUrl), context.request)
+    : context.request;
+  const response = await context.next(requestForNext);
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.toLowerCase().includes('text/html')) return response;
 

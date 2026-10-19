@@ -121,6 +121,18 @@ const puppyHtml = await (await import('node:fs/promises')).readFile(new URL('../
 const puppyDetailScript = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-detail.js', import.meta.url), 'utf8');
 assert.doesNotMatch(puppyHtml, /id="puppy-enquiry-section"|id="puppy-enquiry-form"|Take the next little step|Ask us about|Send an enquiry|No pressure\. Just a conversation\./, 'opened puppy profiles must not render the removed enquiry section');
 
+const { onRequest: socialMetadataMiddleware } = await import('../functions/_middleware.js');
+let rewrittenContactRequestUrl = '';
+const contactRouteResponse = await socialMetadataMiddleware({
+  request: new Request('https://example.test/contact/sample-puppy'),
+  next: async (request) => {
+    rewrittenContactRequestUrl = request instanceof Request ? request.url : String(request);
+    return new Response('template', { status: 200, headers: { 'content-type': 'text/plain' } });
+  },
+  env: {}
+});
+assert.equal(new URL(rewrittenContactRequestUrl).pathname, '/contact/index.html', 'contact route must rewrite to the shared HTML template in middleware');
+assert.equal(contactRouteResponse.status, 200, 'contact route middleware should return the shared template response');
 const puppyContactHtml = await (await import('node:fs/promises')).readFile(new URL('../contact/index.html', import.meta.url), 'utf8');
 const puppyContactJs = await (await import('node:fs/promises')).readFile(new URL('../assets/js/puppy-contact.js', import.meta.url), 'utf8');
 const contactApiSource = await (await import('node:fs/promises')).readFile(new URL('../functions/api/contact.js', import.meta.url), 'utf8');
@@ -157,4 +169,4 @@ const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../f
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
 assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
-console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
+console.log('Smoke tests passed: SMTP encryption/decryption, Firebase private-key parsing, Firebase-authenticated dashboard access, contact-route middleware rewrite, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');

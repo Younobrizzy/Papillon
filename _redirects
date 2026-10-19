@@ -15,8 +15,8 @@
 # Canonical shipping policy URL.
 /shipping /shipping/ 301
 
-# Puppy-specific contact forms use a shared dynamic template.
-/contact/* /contact/index.html 200
+# Puppy contact URLs are rewritten by functions/_middleware.js because Pages
+# _redirects rules are not applied when a Pages Function handles the request.
 
 # All puppy profile routes use the shared Firestore-powered template.
 # Newly created listing slugs use the shared puppy template. The extensionless target avoids Pages clean-URL loops.
