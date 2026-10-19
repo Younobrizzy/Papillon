@@ -249,7 +249,6 @@
         puppy = {
           name: record.name || 'Puppy',
           gender: record.gender || '',
-          coat: record.coat || '',
           age: record.age || '',
           price: priceText,
           status: record.status || 'Looking for a home',
@@ -285,8 +284,14 @@
     putText('puppy-description', puppy.summary);
     putText('puppy-price', puppy.price);
     putText('puppy-age', puppy.age);
-    putText('puppy-coat', puppy.coat);
     putText('puppy-gender-fact', puppy.gender);
+    const genderIcon = document.getElementById('puppy-gender-icon');
+    if (genderIcon) {
+      const normalizedGender = String(puppy.gender || '').trim().toLowerCase();
+      if (/^(male|boy|m)(\b|$)/.test(normalizedGender)) genderIcon.textContent = '♂';
+      else if (/^(female|girl|f)(\b|$)/.test(normalizedGender)) genderIcon.textContent = '♀';
+      else genderIcon.textContent = '⚥';
+    }
     putText('puppy-status', puppy.status);
     putText('puppy-story-heading', puppy.headline);
     putText('puppy-story-heading-em', puppy.headlineEm);
@@ -377,8 +382,12 @@
       });
     }
 
+    const contactPath = '/contact/' + encodeURIComponent(String(record.slug || slug).toLowerCase());
+    document.querySelectorAll('[data-puppy-contact-link]').forEach(function (link) {
+      link.setAttribute('href', contactPath);
+    });
     const cta = document.getElementById('puppy-enquiry-cta');
-    if (cta) cta.setAttribute('aria-label', 'Ask about ' + puppy.name);
+    if (cta) cta.setAttribute('aria-label', 'Contact us about ' + puppy.name);
       }
     } catch (error) {
       console.error('Unable to render puppy profile:', error);

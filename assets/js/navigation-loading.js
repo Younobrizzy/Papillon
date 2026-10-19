@@ -79,11 +79,15 @@
   // Puppy detail pages must stay covered until the listing content and primary image resolve.
   // Other pages keep the ordinary navigation transition with its short maximum duration.
   var isPuppyDetailPage = Boolean(document.body && document.body.classList.contains('puppy-detail-page'));
+  var isPuppyContactPage = Boolean(document.body && document.body.classList.contains('puppy-contact-page'));
   var pendingAt = Number(safeStorageGet(PENDING_KEY));
   safeStorageRemove(PENDING_KEY);
   if (isPuppyDetailPage) {
     showLoader();
     window.addEventListener('papillon:puppy-detail-ready', hideAfterMinimumTime, { once: true });
+  } else if (isPuppyContactPage) {
+    showLoader();
+    window.addEventListener('papillon:puppy-contact-ready', hideAfterMinimumTime, { once: true });
   } else if (pendingAt && Date.now() - pendingAt < PENDING_TTL) {
     showLoader();
     maxTimer = window.setTimeout(hideLoader, MAX_DESTINATION_VISIBLE_MS);

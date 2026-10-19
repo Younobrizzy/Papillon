@@ -15,6 +15,11 @@
 # Canonical shipping policy URL.
 /shipping /shipping/ 301
 
+# Contact flow: all /contact/{listing-slug} paths use the shared enquiry page.
+/contact /contact/ 301
+/contact/ /contact/index.html 200
+/contact/* /contact/index.html 200
+
 # All puppy profile routes use the shared Firestore-powered template.
 # Newly created listing slugs use the shared puppy template. The extensionless target avoids Pages clean-URL loops.
 /:slug /puppy 200

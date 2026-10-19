@@ -7,7 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
 const warnings = [];
 const requiredFiles = [
-  'index.html', 'puppy.html', 'dashboard/index.html', 'shipping/index.html',
+  'index.html', 'puppy.html', 'dashboard/index.html', 'shipping/index.html', 'contact/index.html',
+  'assets/css/puppy-contact.css', 'assets/js/puppy-contact.js',
   'functions/_middleware.js', 'functions/api/config.js', 'functions/api/admin-session.js',
   'functions/api/puppies.js', 'functions/api/preferences.js', 'functions/api/public-scripts.js',
   'functions/api/contact.js', 'functions/api/og-image.js', 'functions/lib/private-firestore.js', 'functions/lib/firestore-document-size.js',
@@ -93,6 +94,19 @@ if (!puppyDetailJs.includes('await waitForImageReady(galleryMainImage, 12000)') 
 if (!navigationLoaderJs.includes('papillon:puppy-detail-ready') || !navigationLoaderJs.includes('isPuppyDetailPage')) {
   errors.push('Navigation loader must wait for the puppy detail readiness event rather than hiding on the page load event.');
 }
+
+const contactHtml = fs.readFileSync(path.join(root, 'contact/index.html'), 'utf8');
+const contactJs = fs.readFileSync(path.join(root, 'assets/js/puppy-contact.js'), 'utf8');
+const contactCss = fs.readFileSync(path.join(root, 'assets/css/puppy-contact.css'), 'utf8');
+if (!redirectRules.includes('/contact/* /contact/index.html 200') || !redirectRules.includes('/contact/ /contact/index.html 200')) errors.push('Contact slug routes must rewrite to the shared contact page.');
+if (!contactHtml.includes('id="puppy-contact-form"') || !contactHtml.includes('name="addressLine1"') || !contactHtml.includes('name="paymentMethod"') || !contactHtml.includes('name="deliveryMethod"')) errors.push('Puppy contact page must collect shipping, payment preference, and delivery preference.');
+if (!contactJs.includes("fetch('/api/puppies?slug=' + encodeURIComponent(slug) + '&summary=1'") || !contactJs.includes("fetch('/api/contact'") || !contactJs.includes("papillon:puppy-contact-ready")) errors.push('Puppy contact page must load the requested listing, submit through the contact API, and signal loader readiness.');
+if (!contactJs.includes('Preferred payment method: ') || !contactJs.includes('Shipping address:') || !contactJs.includes('No payment has been taken')) errors.push('Puppy contact enquiries must include the shipping/payment preferences and clear no-payment confirmation.');
+if (/name=["'](?:cardNumber|card-number|cvv|cvc|bankPassword|accountPassword)["']/i.test(contactHtml)) errors.push('Puppy contact page must not collect payment card or banking credentials.');
+if (!contactCss.includes('.puppy-contact-grid') || !contactCss.includes('@media (max-width: 760px)')) errors.push('Puppy contact page must retain responsive grid styling.');
+if (!navigationLoaderJs.includes('papillon:puppy-contact-ready') || !navigationLoaderJs.includes('isPuppyContactPage')) errors.push('Navigation loader must wait until puppy contact data resolves.');
+const middlewareJs = fs.readFileSync(path.join(root, 'functions/_middleware.js'), 'utf8');
+if (!middlewareJs.includes('resolveContactSlug') || !middlewareJs.includes('/contact/${contactSlug}')) errors.push('Puppy contact routes must receive slug-specific metadata and canonical URLs.');
 
 const puppyApi = fs.readFileSync(path.join(root, 'functions/api/puppies.js'), 'utf8');
 const documentSizeGuard = fs.readFileSync(path.join(root, 'functions/lib/firestore-document-size.js'), 'utf8');

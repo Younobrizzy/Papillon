@@ -298,7 +298,8 @@ export async function onRequestGet({ request, env }) {
     if (slug !== null) {
       const normalized = normalizeSlug(slug);
       if (!normalized) return jsonResponse({ error: 'A valid puppy slug is required.' }, 400);
-      const puppy = await getPuppy(env, normalized, true);
+      const includeGallery = url.searchParams.get('summary') !== '1';
+      const puppy = await getPuppy(env, normalized, includeGallery);
       if (!puppy) return jsonResponse({ error: 'Puppy not found.' }, 404);
       return jsonResponse({ puppy });
     }

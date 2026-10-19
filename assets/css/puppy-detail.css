@@ -57,7 +57,7 @@
 .profile-price-panel strong { margin: 1px 0 0; color: var(--coral-dark); font-family: var(--heading); font-size: 35px; font-weight: 600; letter-spacing: -.04em; line-height: 1.25; }
 .profile-price-panel small { color: #8a9085; font-size: 9px; }
 .profile-price-flower { color: var(--gold); font-size: 42px; }
-.profile-facts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); margin-bottom: 25px; border-top: 1px solid #e8dfd4; border-bottom: 1px solid #e8dfd4; }
+.profile-facts { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); margin-bottom: 25px; border-top: 1px solid #e8dfd4; border-bottom: 1px solid #e8dfd4; }
 .profile-fact { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 15px 10px 15px 0; }
 .profile-fact + .profile-fact { padding-left: 12px; border-left: 1px solid #e8dfd4; }
 .profile-fact-icon { display: grid; flex: 0 0 auto; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sage); color: var(--coral-dark); font-size: 14px; }
@@ -120,7 +120,7 @@
   .profile-summary .eyebrow { margin-bottom: 12px; }
   .profile-summary h1 { margin-bottom: 5px; font-size: clamp(49px, 13vw, 70px); }
   .profile-description { font-size: 13px; }
-  .profile-facts { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .profile-facts { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .profile-fact { flex-direction: column; gap: 7px; padding: 13px 8px 13px 0; }
   .profile-fact + .profile-fact { padding-left: 10px; }
   .profile-fact strong { font-size: 10px; }

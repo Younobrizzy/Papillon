@@ -55,8 +55,13 @@ function resolveListingSlug(pathname, url) {
   if (pathname === '/puppy.html') return safeSlug(url.searchParams.get('slug'));
   const raw = pathname.replace(/^\/+|\/+$/g, '');
   if (!raw || raw.includes('.') || raw.includes('/')) return '';
-  if (['dashboard', 'shipping', 'api', 'assets', 'admin', '404'].includes(raw)) return '';
+  if (['dashboard', 'shipping', 'contact', 'api', 'assets', 'admin', '404'].includes(raw)) return '';
   return safeSlug(raw);
+}
+
+function resolveContactSlug(pathname) {
+  const match = String(pathname || '').match(/^\/contact\/([^/]+)\/?$/);
+  return match ? safeSlug(match[1]) : '';
 }
 
 function normalizePhone(value) {
@@ -88,8 +93,10 @@ export async function onRequest(context) {
   const path = normalizePath(url.pathname);
   const isHome = path === '/' || url.pathname === '/index.html';
   const isShipping = path === '/shipping/' || url.pathname === '/shipping/index.html';
-  const slug = resolveListingSlug(url.pathname, url);
-  if (!isHome && !isShipping && !slug) return response;
+  const contactSlug = resolveContactSlug(url.pathname);
+  const isContactPage = Boolean(contactSlug);
+  const slug = contactSlug || resolveListingSlug(url.pathname, url);
+  if (!isHome && !isShipping && !isContactPage && !slug) return response;
 
   const env = context.env || {};
   const [settingsResult, listingResult] = await Promise.all([
@@ -115,9 +122,20 @@ export async function onRequest(context) {
     ? '/api/og-image'
     : '/assets/images/og-image.jpg';
   let imageAlt = `${siteBranding} — Papillon puppies ready to meet their forever families.`;
-  let canonicalPath = isHome ? '/' : isShipping ? '/shipping/' : `/${slug}`;
+  let canonicalPath = isHome ? '/' : isShipping ? '/shipping/' : isContactPage ? `/contact/${contactSlug}` : `/${slug}`;
 
-  if (isShipping) {
+  if (isContactPage) {
+    if (listing) {
+      const puppyName = tidyText(listing.name || 'this puppy', 80);
+      title = `Enquiry about ${puppyName} | ${siteBranding}`;
+      description = `Share your contact, shipping, and payment preferences for ${puppyName}. We will confirm availability, costs, and next steps with you.`;
+      socialImagePath = `/api/og-image?slug=${encodeURIComponent(contactSlug)}`;
+      imageAlt = tidyText(listing.imageAlt || `${puppyName} puppy`, 180);
+    } else {
+      title = `Puppy enquiry | ${siteBranding}`;
+      description = 'Share your contact and delivery preferences. We will confirm puppy availability and next steps with you.';
+    }
+  } else if (isShipping) {
     title = `Shipping Policy | ${siteBranding}`;
     description = PAGE_DESCRIPTIONS['/shipping/'];
     imageAlt = `${siteBranding} shipping policy`;
