@@ -4,7 +4,7 @@ A responsive puppy website and private listing dashboard built with plain HTML, 
 
 > **Important deployment note:** deploy this folder as the Pages project root so Cloudflare can discover the `functions/` directory. A static-only host or `node scripts/dev-server.cjs` does not run the `/api/*` endpoints.
 
-The root folder intentionally keeps the entry-point files and Cloudflare Pages conventions (`index.html`, `puppy.html`, `404.html`, `_headers`, `_redirects`, and `functions/`). Supporting icons, Apache config, Firestore rules, and secondary docs are grouped under `assets/icons/`, `config/`, and `docs/`. This keeps the Pages runtime discovery intact while avoiding a cluttered root.
+The root folder intentionally keeps the entry-point files and Cloudflare Pages conventions (`index.html`, `puppy.html`, `404.html`, `_headers`, `_redirects`, and `functions/`). Supporting icons, Firestore rules, and secondary docs are grouped under `assets/icons/`, `config/`, and `docs/`. Unreferenced legacy PNG/SVG logo exports and the Apache-only rewrite file have been removed; Cloudflare Pages is the supported deployment target. This keeps the Pages runtime discovery intact while avoiding a cluttered root.
 
 ## Contents
 
@@ -67,11 +67,11 @@ Use the contents of this folder as the project root.
 | `assets/js/firebase.js` | Firebase Web SDK App/Auth initializer used by dashboard sign-in |
 | `assets/js/navigation-loading.js` | Navigation loader and reduced-motion behavior |
 | `assets/images/og-image.jpg` | Built-in fallback social preview image |
-| `assets/images/brand/` | SVG and PNG Papillon & Co. brand assets |
+| `assets/images/brand/papillon-logo.svg` | Header and footer logo lockup |
+| `assets/images/brand/papillon-mark.svg` | Shared butterfly mark for the dashboard and navigation loader |
 | `assets/images/sections/` | Decorative/cropped section photos, separate from Firestore puppy images |
 | `assets/icons/` | Favicons, Apple touch icon, PWA icons, and the web manifest |
 | `config/firestore.rules` | Default-deny rules for browser Firestore access |
-| `config/apache/.htaccess` | Apache/cPanel clean routes and custom 404 configuration; copy to the host document root only if deploying to Apache |
 | `docs/DEPLOYMENT_CHECKLIST.md` | Short, step-by-step launch checklist |
 | `_redirects` | Cloudflare Pages-compatible clean URL rules, including aliases for conventional root icon URLs |
 | `_headers` | Cache headers for icon and brand assets |
@@ -483,7 +483,7 @@ The homepage's puppy grid uses three columns on wide desktop screens, two column
 
 ### Logo, favicon, and loader
 
-The header/footer logo uses SVG lockups in `assets/images/brand/`. The butterfly mark in `assets/images/brand/papillon-mark.svg` is shared with the page loader and `assets/icons/favicon.svg`. PNG exports, ICO, Apple touch icon, and PWA icons are stored together in `assets/icons/` and are based on that same mark. When replacing the brand mark, update the SVG source and regenerate its raster derivatives so the header, loader and favicon remain consistent. Favicon references have cache-busting query strings, and `_headers` asks Cloudflare to revalidate those assets. Root-level URLs such as `/favicon.ico` remain available through internal `_redirects` rewrites to `assets/icons/`, which preserves compatibility with browsers and crawlers that request conventional favicon paths.
+The header/footer logo uses SVG lockups in `assets/images/brand/`. The butterfly mark in `assets/images/brand/papillon-mark.svg` is shared with the page loader and `assets/icons/favicon.svg`. ICO, Apple touch icon, and PWA icon derivatives are stored together in `assets/icons/` and are based on that same mark. Unreferenced logo PNG exports and light/dark alternate lockups were removed to avoid keeping duplicate assets. When replacing the brand mark, update the SVG source and regenerate its raster derivatives so the header, loader and favicon remain consistent. Favicon references have cache-busting query strings, and `_headers` asks Cloudflare to revalidate those assets. Root-level URLs such as `/favicon.ico` remain available through internal `_redirects` rewrites to `assets/icons/`, which preserves compatibility with browsers and crawlers that request conventional favicon paths.
 
 ### Page photos versus listing photos
 
@@ -506,6 +506,6 @@ Decorative hero/about photos and their crop versions live under `assets/images/s
 - Use a test deployment for large changes, keep a known-good deployment available for rollback, and test a real enquiry after changing SMTP or secrets.
 - Use images and puppy descriptions truthfully, and review all public listing details before publication.
 
-## Other hosting options
+## Alternative hosting
 
-The `config/apache/.htaccess` file provides clean routes for Apache/cPanel, and `_redirects` provides the supported clean route pattern for Pages-style static hosts. However, rewrites alone do not implement the backend. For Apache/cPanel or another static host to have the full features, you must port the Pages Functions to an equivalent server-side runtime, including the Firestore access layer, Firebase Authentication verification and administrator authorization, Preferences storage, public metadata middleware, image endpoint, and SMTP delivery. The included `node scripts/dev-server.cjs` is only for visual/static preview and is not a production backend.
+Cloudflare Pages is the supported production host because it runs the `functions/` backend alongside the static frontend. This project intentionally does not include an Apache/cPanel rewrite file: moving it to another host requires implementing equivalent server-side handling for Firestore access, Firebase Authentication verification and administrator authorization, Preferences storage, social metadata middleware, the social image endpoint, and SMTP delivery. The included `node scripts/dev-server.cjs` is only for visual/static preview and is not a production backend.
