@@ -853,6 +853,7 @@
     }
 
     const smtp = preferences.smtp || {};
+    if (result.smtpMigrationWarning) { feedback.textContent = result.smtpMigrationWarning; feedback.classList.add('error'); }
     if (cameFromServer) {
       // Clear any legacy plaintext SMTP password that may have been saved by an earlier version.
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
@@ -868,6 +869,7 @@
           port: smtp.port || '',
           security: Number(smtp.port) === 465 ? 'ssl' : 'starttls',
           username: smtp.username || '',
+          fromEmail: smtp.fromEmail || '',
           hasPassword: Boolean(smtp.hasPassword)
         }
       }));
@@ -884,6 +886,7 @@
     $('#preference-smtp-host').value = smtp.host || '';
     $('#preference-smtp-port').value = smtp.port || '';
     $('#preference-smtp-username').value = smtp.username || '';
+    $('#preference-smtp-from-email').value = smtp.fromEmail || smtp.username || '';
     // The server intentionally never sends the SMTP password back to the browser.
     $('#preference-smtp-password').value = cameFromServer ? '' : (smtp.password || '');
     $('#preference-smtp-password').placeholder = savedSmtpPasswordExists ? 'Saved securely — leave blank to keep it' : 'Enter SMTP password';
@@ -958,6 +961,35 @@
     }
   }
 
+  async function testSmtpConnection() {
+    const button = $('#smtp-test-button');
+    const feedback = $('#smtp-test-feedback');
+    if (!button || !feedback) return;
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Testing…';
+    feedback.textContent = '';
+    feedback.classList.remove('error', 'success');
+    try {
+      const response = await apiFetch('/api/admin/smtp-test', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: '{}',
+        cache: 'no-store'
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || 'SMTP connection test failed.');
+      feedback.textContent = 'SMTP connection and authentication succeeded using TLS.';
+      feedback.classList.add('success');
+    } catch (error) {
+      feedback.textContent = error.message || 'SMTP connection test failed.';
+      feedback.classList.add('error');
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  }
+
   async function handlePreferencesSave(event) {
     event.preventDefault();
     const email = $('#preference-email').value.trim();
@@ -970,8 +1002,9 @@
     const smtpHost = $('#preference-smtp-host').value.trim();
     const smtpPortRaw = $('#preference-smtp-port').value.trim();
     const smtpUsername = $('#preference-smtp-username').value.trim();
+    const smtpFromEmail = $('#preference-smtp-from-email').value.trim();
     const smtpPassword = $('#preference-smtp-password').value;
-    const hasAnySmtpValue = Boolean(smtpHost || smtpPortRaw || smtpUsername || smtpPassword);
+    const hasAnySmtpValue = Boolean(smtpHost || smtpPortRaw || smtpUsername || smtpFromEmail || smtpPassword);
     feedback.classList.remove('error');
 
     if (siteTitle.length > 120 || siteBranding.length > 80 || siteDescription.length > 400) {
@@ -985,11 +1018,14 @@
       feedback.textContent = 'Enter a valid phone number with 7–20 digits, or leave it blank.'; feedback.classList.add('error'); return;
     }
     const smtpPort = smtpPortRaw ? Number(smtpPortRaw) : '';
-    if (smtpPortRaw && (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535 || smtpPort === 25)) {
-      feedback.textContent = 'Enter a valid SMTP submission port. Ports 465 and 587 are commonly supported; port 25 is unavailable.'; feedback.classList.add('error'); return;
+    if (smtpPortRaw && (![465, 587, 2525].includes(smtpPort))) {
+      feedback.textContent = 'Use SMTP port 465, 587, or 2525.'; feedback.classList.add('error'); return;
     }
-    if (hasAnySmtpValue && (!smtpHost || !smtpPort || !smtpUsername)) {
-      feedback.textContent = 'Complete the SMTP host, port, and username or clear all SMTP fields.'; feedback.classList.add('error'); return;
+    if (hasAnySmtpValue && (!smtpHost || !smtpPort || !smtpUsername || !smtpFromEmail)) {
+      feedback.textContent = 'Complete the SMTP host, port, username, and From email.'; feedback.classList.add('error'); return;
+    }
+    if (hasAnySmtpValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtpFromEmail)) {
+      feedback.textContent = 'Enter a valid From email address.'; feedback.classList.add('error'); return;
     }
 
     const saveButton = $('#preferences-form button[type="submit"]');
@@ -1009,7 +1045,7 @@
           siteBranding,
           siteDescription,
           siteOgImage: currentSiteOgImage,
-          smtp: { host: smtpHost, port: smtpPort, username: smtpUsername, password: smtpPassword }
+          smtp: { host: smtpHost, port: smtpPort, username: smtpUsername, fromEmail: smtpFromEmail, password: smtpPassword }
         })
       });
       const result = await response.json().catch(() => ({}));
@@ -1023,7 +1059,7 @@
         siteBranding,
         siteDescription,
         siteOgImage: currentSiteOgImage,
-        smtp: { host: smtpHost, port: smtpPort, security: smtpPort === 465 ? 'ssl' : 'starttls', username: smtpUsername, hasPassword: Boolean(hasAnySmtpValue) }
+        smtp: { host: smtpHost, port: smtpPort, security: smtpPort === 465 ? 'ssl' : 'starttls', username: smtpUsername, fromEmail: smtpFromEmail, hasPassword: Boolean(hasAnySmtpValue) }
       };
       // Keep only non-secret convenience values in local storage; credentials live server-side.
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify(safePreferences));
@@ -1062,7 +1098,7 @@
       return;
     }
     if (!auth || !signInWithEmailAndPassword) {
-      loginError.textContent = 'Firebase Authentication is not ready. Check the six Firebase Web config variables in Cloudflare and reload.';
+      loginError.textContent = 'Firebase Authentication is not ready. Check FIREBASE_PROJECT_ID and FIREBASE_WEB_API_KEY in Cloudflare and reload.';
       loginError.hidden = false;
       return;
     }
@@ -1089,7 +1125,7 @@
         'auth/invalid-email': 'Enter a valid email address.',
         'auth/operation-not-allowed': 'Enable Email/Password sign-in in Firebase Authentication settings.',
         'auth/unauthorized-domain': 'Add this website domain to Firebase Authentication authorized domains.',
-        'auth/invalid-api-key': 'The Firebase API key is missing or invalid. Check the Cloudflare FIREBASE_API_KEY variable.',
+        'auth/invalid-api-key': 'The Firebase API key is missing or invalid. Check the Cloudflare FIREBASE_WEB_API_KEY variable.',
         'auth/user-disabled': 'This Firebase account has been disabled.',
         'auth/too-many-requests': 'Too many sign-in attempts. Wait a little and try again.',
         'auth/network-request-failed': 'Firebase could not be reached. Check your internet connection.'
@@ -1135,6 +1171,7 @@
   $('#add-listing-button').addEventListener('click', () => openListingEditor());
   listingForm.addEventListener('submit', handleListingSubmit);
   $('#preferences-form').addEventListener('submit', handlePreferencesSave);
+  $('#smtp-test-button').addEventListener('click', testSmtpConnection);
   $('#preference-site-og-image-file').addEventListener('change', handleSiteOgImageSelection);
   $('#preference-site-og-image-remove').addEventListener('click', removeSiteOgImage);
   $$('.field-lock-toggle[data-lock-target]').forEach(button => button.addEventListener('click', () => {
@@ -1215,7 +1252,7 @@
     } catch (error) {
       showLogin();
       if (loginError) {
-        loginError.textContent = error.message || 'Firebase Authentication could not initialize. Check the six Firebase Web config variables in Cloudflare.';
+        loginError.textContent = error.message || 'Firebase Authentication could not initialize. Check FIREBASE_PROJECT_ID and FIREBASE_WEB_API_KEY in Cloudflare.';
         loginError.hidden = false;
       }
     }

@@ -4,11 +4,23 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const SMTP_TIMEOUT_MS = 15000;
 
-export function validateSmtpHost(value) {
+export function validateSmtpHost(value, env = null) {
   const host = String(value || "").trim().toLowerCase().replace(/\.$/, "");
   if (!host || host.length > 253) clientSmtpHostError();
   if (/[^a-z0-9.:-]/i.test(host) || host.includes("/") || host.includes("\\") || host.includes("@")) clientSmtpHostError();
 
+  const allowlistRaw = String(env?.SMTP_HOST_ALLOWLIST || "").trim();
+  if (allowlistRaw) {
+    const allowed = allowlistRaw.split(",").map(item => item.trim().toLowerCase()).filter(Boolean);
+    const matches = allowed.some(pattern => pattern.startsWith("*.")
+      ? host === pattern.slice(2) || host.endsWith(pattern.slice(1))
+      : host === pattern);
+    if (!matches) {
+      const error = new Error("This SMTP host is not allowed by SMTP_HOST_ALLOWLIST.");
+      error.status = 400;
+      throw error;
+    }
+  }
 
   if (isIPv4(host)) {
     const parts = host.split(".").map(Number);

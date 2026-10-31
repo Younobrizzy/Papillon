@@ -94,3 +94,26 @@ export function buildContactEmail({ name, email, subject, message, puppy = '', p
   ].join('\n');
   return { html, text };
 }
+
+export function buildCustomerConfirmationEmail({ name, email, puppy = '' }) {
+  const safeName = escapeHtml(name);
+  const safePuppy = escapeHtml(puppy);
+  const enquiryDescription = puppy ? ` about ${safePuppy}` : '';
+  const html = baseTemplate({
+    eyebrow: 'Message received',
+    title: 'Thank you for contacting us',
+    bodyHtml: `
+      <p style="margin:14px 0 0;font-size:14px;line-height:22px;color:${MUTED};">Hello ${safeName},</p>
+      <p style="margin:14px 0 0;font-size:14px;line-height:23px;color:${TEXT};">Thank you for contacting Papillon &amp; Co. We have received your message${enquiryDescription} and will get back to you soon.</p>
+      <p style="margin:18px 0 0;font-size:13px;line-height:21px;color:${MUTED};">Papillon &amp; Co.</p>
+    `
+  });
+  const text = [
+    `Hello ${name},`,
+    '',
+    `Thank you for contacting Papillon & Co. We have received your message${puppy ? ` about ${puppy}` : ''} and will get back to you soon.`,
+    '',
+    'Papillon & Co.'
+  ].join('\n');
+  return { html, text, to: email };
+}

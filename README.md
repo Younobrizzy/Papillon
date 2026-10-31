@@ -28,7 +28,7 @@ The root folder intentionally keeps the entry-point files and Cloudflare Pages c
 ## Features
 
 - Responsive homepage, Shipping Policy page, puppy profiles, and a custom 404 page.
-- Dashboard sign-in through Firebase Authentication (email/password). Any active Firebase Authentication user can access the dashboard; no `admins` collection or role document is required. No custom dashboard email/password Cloudflare variables or app-managed login cookie are used.
+- Dashboard sign-in through Firebase Authentication (email/password), followed by a server-side `admin/{uid}` authorization check. Only explicitly provisioned administrators can manage listings, preferences, and SMTP settings.
 - Firestore-backed puppy create, read, update, and delete operations. No puppy demo records are bundled or seeded.
 - One main JPEG photo per listing and up to eight gallery photos, each independently compressed to no more than **240 KiB (245,760 bytes)** before save and checked again by the server. The dashboard preflights the complete main listing size and the server validates the full size of the main and every gallery document before committing writes.
 - Clean puppy URLs such as `/little-puppy`; every listing uses the shared `puppy.html` template.
@@ -71,7 +71,9 @@ Use the contents of this folder as the project root.
 | `assets/images/brand/papillon-mark.svg` | Shared butterfly mark for the dashboard and navigation loader |
 | `assets/images/sections/` | Decorative/cropped section photos, separate from Firestore puppy images |
 | `assets/icons/` | Favicons, Apple touch icon, PWA icons, and the web manifest |
-| `config/firestore.rules` | Default-deny rules for browser Firestore access |
+| `firestore.rules` | Root default-deny rules deployed by Firebase CLI |
+| `firebase.json` | Points Firebase CLI to the root Firestore rules file |
+| `config/firestore.rules` | Matching compatibility copy of the default-deny rules |
 | `docs/DEPLOYMENT_CHECKLIST.md` | Short, step-by-step launch checklist |
 | `_redirects` | Cloudflare Pages-compatible clean URL rules, including aliases for conventional root icon URLs |
 | `_headers` | Cache headers for icon and brand assets |
@@ -87,15 +89,20 @@ Use the contents of this folder as the project root.
 | Path | Purpose |
 | --- | --- |
 | `functions/_middleware.js` | Rewrites HTML metadata and inserts the configured phone number before returning supported public pages |
-| `functions/api/config.js` | Returns the six Firebase Web SDK config values from environment variables at `GET /api/config` |
-| `functions/api/admin-session.js` | Verifies Firebase Authentication users for dashboard access; no role document, custom password, or cookie session |
-| `functions/api/puppies.js` | Public listing reads and Firebase-authenticated listing create/update/delete operations in Firestore |
-| `functions/api/preferences.js` | Reads/saves private Preferences and public site config; requires a valid Firebase Authentication sign-in |
+| `functions/api/config.js` | Returns only the public Firebase Web API key and project ID at `GET /api/config` |
+| `functions/api/admin-session.js` | Verifies Firebase Authentication identity and requires the matching `admin/{uid}` grant |
+| `functions/api/puppies.js` | Public listing reads and administrator-authorized listing create/update/delete operations in Firestore |
+| `functions/api/preferences.js` | Reads/saves private Preferences and public site config; requires an authorized administrator |
 | `functions/api/public-scripts.js` | Public read-only endpoint for the phone number and live-chat/site snippet |
-| `functions/api/contact.js` | Validates a contact/enquiry form, rate-limits submissions, and sends SMTP email |
+| `functions/api/contact.js` | Validates and rate-limits contact/enquiry submissions; sends an admin notification and customer confirmation |
+| `functions/api/send.js` | Authenticated reusable admin-to-customer email endpoint; never emits `Reply-To` |
+| `functions/api/health.js` | Reports non-secret Firebase, SMTP, and encryption configuration status |
+| `functions/api/admin/smtp-test.js` | Administrator-only SMTP TLS connection and authentication test |
+| `functions/lib/require-admin.js` | Enforces a server-verified Firebase ID token plus an `admin/{uid}` grant |
+| `functions/lib/smtp-config.js` | Loads, validates, migrates, and saves SMTP settings in `private/smtp` |
 | `functions/api/og-image.js` | Serves the custom site or individual puppy JPEG social image |
-| `functions/lib/admin-session.js` | Validates Firebase ID tokens, same-origin checks, and safe text helpers; no Firestore role check |
-| `functions/lib/private-firestore.js` | Reads/writes private Firestore settings and transactionally rate-limits contact submissions; replaces Cloudflare KV |
+| `functions/lib/admin-session.js` | Validates Firebase ID tokens, creates Firestore service-account access tokens, and provides same-origin/text helpers |
+| `functions/lib/private-firestore.js` | Reads/writes private Firestore settings and transactionally rate-limits contact submissions |
 | `config/firestore.rules` | Default-deny rules for browser Firestore access; server-side service-account requests use IAM |
 | `functions/lib/crypto.js` | AES-GCM encryption/decryption of the stored SMTP password |
 | `functions/lib/public-site-script.js` | Reads/writes site configuration and images through the Firestore REST API |
@@ -120,150 +127,123 @@ An unknown puppy slug renders the shared profile template, which displays a not-
 
 | Method and path | Access | Purpose |
 | --- | --- | --- |
-| `GET /api/config` | Public | Returns Firebase Web configuration. Requires all six `FIREBASE_*` web-config values. |
-| `GET /api/admin-session` | Firebase ID token | Verifies the current Firebase Authentication user; no allowlist lookup is performed. |
-| `POST /api/admin-session` | Firebase ID token + same origin | Optional verification endpoint; does not accept a password or issue a custom cookie. |
-| `DELETE /api/admin-session` | Same origin | Legacy-compatible no-op confirmation; Firebase SDK performs actual sign-out in the browser. |
+| `GET /api/config` | Public | Returns the public Firebase Web API key and project ID only. |
+| `GET /api/health` | Public, non-secret status | Reports Firebase, SMTP, and encryption readiness without exposing credentials. |
+| `GET /api/admin-session` | Firebase ID token + `admin/{uid}` grant | Verifies the signed-in administrator. |
+| `POST /api/admin-session` | Same origin + Firebase ID token + admin grant | Re-checks the administrator session. |
+| `DELETE /api/admin-session` | Same origin | Confirms sign-out; Firebase SDK clears the browser session. |
 | `GET /api/puppies` | Public read | Returns public puppy listings. |
 | `GET /api/puppies?slug=<slug>` | Public read | Returns one puppy and its gallery by slug. |
-| `POST /api/puppies` | Valid Firebase Authentication sign-in + same origin | Creates or updates a listing and its gallery documents. |
-| `DELETE /api/puppies?slug=<slug>` | Valid Firebase Authentication sign-in + same origin | Deletes a listing and its gallery documents. |
-| `GET /api/preferences` | Valid Firebase Authentication sign-in | Loads Preferences. The SMTP password is never returned. |
-| `POST /api/preferences` | Valid Firebase Authentication sign-in + same origin | Saves private email/SMTP values and public Firestore site settings. |
-| `GET /api/public-scripts` | Public read | Returns `script`, `phoneNumber`, and update metadata; never returns SMTP secrets. |
+| `POST /api/puppies` | Authorized administrator + same origin | Creates or updates a listing and gallery documents. |
+| `DELETE /api/puppies?slug=<slug>` | Authorized administrator + same origin | Deletes a listing and its gallery documents. |
+| `GET /api/preferences` | Authorized administrator | Loads private Preferences and safe SMTP metadata; never returns the password or ciphertext. |
+| `POST /api/preferences` | Authorized administrator + same origin | Saves private contact email, public site config, and SMTP settings. |
+| `POST /api/admin/smtp-test` | Authorized administrator + same origin | Tests SMTP connection, TLS, authentication, and sender acceptance without sending an email. |
+| `POST /api/send` | Authorized administrator + same origin | Sends general admin-to-customer emails with no `Reply-To` header. |
+| `GET /api/public-scripts` | Public read | Returns public `script` and `phoneNumber`; no private contact or SMTP data. |
 | `GET /api/og-image` | Public read | Serves the custom site social image or redirects to the built-in fallback. |
 | `GET /api/og-image?slug=<slug>` | Public read | Serves the main image for one puppy listing as JPEG bytes. |
-| `POST /api/contact` | Same-origin public form submission | Validates and delivers a contact email; the API also supports optional puppy-name metadata. |
+| `POST /api/contact` | Same-origin public form submission | Validates and rate-limits contact/enquiry messages; sends an admin notification and attempts a customer confirmation. |
 
-Dashboard mutation endpoints require a valid Firebase ID token from any active Firebase Authentication account, plus an allowed same-origin request for mutations. Every signed-in account can create/update/delete puppy listings and modify dashboard Preferences, including contact-recipient and SMTP settings. Firestore operations are made server-side using the service account. The browser never receives the service-account private key.
+All dashboard reads of private settings and all mutations require a valid Firebase ID token plus an enabled `admin/{uid}` document. Public listing and social-preview endpoints expose only fields intended for website visitors. The service-account credential and SMTP password stay on the Cloudflare backend.
 
 ## Deploy to Cloudflare Pages
 
-Cloudflare Pages is the supported hosting setup for the full feature set because this project needs Pages Functions, Firestore access, and Cloudflare's TCP socket support for SMTP. No KV namespace is used.
+Cloudflare Pages is the supported hosting setup because the project uses Pages Functions, Firestore REST access, and Cloudflare TCP sockets for SMTP. No KV binding is required.
 
-### 1. Prepare the project root
+1. Extract the ZIP and use the project folder's contents as the Pages project root. Cloudflare must see `index.html`, `functions/`, `assets/`, `_redirects`, and `_headers` at that root.
+2. Deploy through the Cloudflare Pages Git integration or your existing Pages workflow. No frontend build command is required; the site is plain HTML/CSS/JavaScript. Keep `wrangler.toml` absent so the Cloudflare dashboard remains the source of truth for Variables and Secrets.
+3. Configure the five environment-variable names documented below. `FIREBASE_SERVICE_ACCOUNT_JSON` and `SMTP_ENCRYPTION_KEY` must be Cloudflare Secrets. Add the optional SMTP host allowlist if you want to restrict approved providers.
+4. Deploy the Firestore deny-all rules using `firebase deploy --only firestore:rules --project papillonandco-98c22` (or replace the project ID with the matching project). These rules block direct browser SDK access; Cloudflare service-account operations use Google Cloud IAM.
+5. Enable Firebase Authentication Email/Password, create the intended administrator account, and add its `admin/{uid}` authorization document as described below.
+6. Open `/dashboard/`, sign in, save the contact recipient and SMTP settings under Preferences → SMTP, then use **Test SMTP connection**. Submit a real test contact form only after the health and SMTP checks succeed.
+7. Configure Production and Preview environments separately and redeploy after every change to Variables or Secrets.
 
-1. Download and extract the ZIP.
-2. Open the extracted project directory (the ZIP contains the project files at its root).
-3. Use the **contents of that directory** as the Cloudflare Pages project root. It must directly contain `index.html`, `functions/`, `assets/`, `_redirects`, and the other top-level files.
-4. Do not put the folder one level deeper than the configured project root. Cloudflare must see the `functions/` folder next to `index.html`.
-
-### 2. Create the Pages project
-
-For a Git-connected deployment, commit the project contents to the repository and connect it to Cloudflare Pages. Use no frontend build command because the site is plain HTML/CSS/JavaScript. Set the output/build directory to the project root (`.`) when the provider's setup requires an output directory, and ensure the `functions/` folder is deployed with the static files. For this project, keep `wrangler.toml` out of the repository and deploy the project root through the Cloudflare Pages Git integration (or your usual Pages deployment workflow). This intentionally leaves the dashboard as the source of truth for regular Variables and Secrets. If this project was previously deployed with a Wrangler configuration file, remove that file and complete a fresh deployment before configuring ordinary Variables in the dashboard.
-
-**Do not rely on a static-only drag-and-drop deployment to run the backend.** Verify that `/api/config`, `/api/puppies`, `/api/preferences`, and the other function routes are handled by Pages Functions, not returned as missing static files.
-
-### 3. No Cloudflare KV binding is required
-
-Papillon does not use Cloudflare KV. Private contact/SMTP Preferences and contact-form rate limits are stored in Firestore through the server-side service account. Do not create or configure a `PAPILLON_STORE` binding.
-
-### 4. Configure environment variables and secrets
-
-Use the included `.dev.vars.example` as a checklist for local development; copy it to `.dev.vars` and replace the blank values. The real `.dev.vars` file is ignored by Git. For production, open the Pages project → **Settings → Variables and Secrets**. Add the six regular Variables and exactly three Secrets listed in the next section in both Production and Preview as appropriate. This repository intentionally has no `wrangler.toml`: using a Wrangler configuration file makes it the source of truth for Pages configuration and can prevent editing regular Variables in the dashboard. Use **Secrets** only for `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `SMTP_ENCRYPTION_KEY`. Redeploy after modifying configuration so the running deployment has the new values.
-
-### 5. Configure Firebase and Firestore
-
-Follow [Firebase and Firestore setup](#firebase-and-firestore-setup). The site needs server-side Firestore access for puppy listings, public Preferences, and server-rendered social previews.
-
-### 6. Configure Firebase Authentication dashboard access
-
-Follow [Firebase Authentication dashboard access](#firebase-authentication-dashboard-access). Enable Email/Password sign-in and create Firebase Authentication accounts for users who should have dashboard access. No `admins` collection or per-user Firestore document is required.
-
-### 7. Configure email
-
-Set `SMTP_ENCRYPTION_KEY` as a Cloudflare **Secret** (and as a local `.dev.vars` value during development), deploy, visit `/dashboard/`, sign in with the Firebase Auth user, and fill in Preferences. Contact email and SMTP are not ready until saved through the dashboard.
-
-### 8. Create a deployment and run the checks
-
-Use the checklist under [Testing after deployment](#testing-after-deployment) before promoting the production site.
+Do not use a static-only deployment for production: it will serve the pages but will not run the `/api/*` Cloudflare Functions.
 
 ## Cloudflare variables and secrets
 
-Configure these under **Cloudflare Dashboard → Workers & Pages → your Pages project → Settings → Variables and Secrets**. Add them to **Production** and **Preview** separately wherever you use those environments. Cloudflare exposes both regular variables and secrets to Pages Functions through `env.NAME`. At runtime, every value below is read as a **string**; the Cloudflare type column tells you whether to create a regular **Variable** or a protected **Secret** in the dashboard.
+Papillon follows the same five environment-variable names as Movara. Configure them in **Cloudflare Dashboard → Workers & Pages → your Pages project → Settings → Variables and Secrets** for every environment you deploy.
 
-This project intentionally does **not** include `wrangler.toml`, `wrangler.json`, or `wrangler.jsonc`. You can configure deployment variables and secrets directly in the Cloudflare dashboard, and Cloudflare Pages still discovers the `functions/` directory when the project root is deployed correctly. A Wrangler CLI command is only needed for local development or optional command-line deployment; a Wrangler configuration file is not required for the dashboard-managed deployment described here.
-
-### Required regular variables
-
-Create each row as a Cloudflare **Variable** (not a Secret). Each value is a string. The first six values below are the exact Firebase Web configuration for the `papillonandco-98c22` project; they are intentionally used by the browser SDK, so they are not private service-account credentials. Firebase API keys are client identifiers; use Firebase Authentication, Firestore rules, IAM, and API restrictions for security rather than treating the Web API key as a password.
-
-| Name | Cloudflare type | Value format | Value / purpose |
+| Name | Type | Required | Purpose |
 | --- | --- | --- | --- |
-| `FIREBASE_PROJECT_ID` | **Variable** | String / text | `papillonandco-98c22` — Firebase/Google Cloud project ID. Must match Authentication and Firestore. |
-| `FIREBASE_API_KEY` | **Variable** | String / text | `AIzaSyAejpKo6LNw5z_q3DtpALXKtcpJsc90xVY` — Firebase Web app API key used by the browser SDK and Firebase ID-token verification flow. This is client configuration, not a service-account secret. |
-| `FIREBASE_AUTH_DOMAIN` | **Variable** | String / hostname | `papillonandco-98c22.firebaseapp.com` — enter the hostname only; do not add `https://`. |
-| `FIREBASE_STORAGE_BUCKET` | **Variable** | String / text | `papillonandco-98c22.firebasestorage.app` — storage bucket value from the Firebase Web app configuration. |
-| `FIREBASE_MESSAGING_SENDER_ID` | **Variable** | String / numeric-looking text | `543638533861` — enter it as text, not as a numeric type. |
-| `FIREBASE_APP_ID` | **Variable** | String / text | `1:543638533861:web:22c0917b5f8d9a348d060c` — Firebase Web app ID. |
+| `FIREBASE_PROJECT_ID` | Variable | Yes | Firebase project ID. For the supplied project it is `papillonandco-98c22`. |
+| `FIREBASE_WEB_API_KEY` | Variable | Yes | Public Firebase Web API key used by the browser Auth SDK and ID-token verification. It is not a service-account credential. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | **Secret** | Yes | Complete service-account JSON with `project_id`, `client_email`, and `private_key`. The JSON project ID must match `FIREBASE_PROJECT_ID`. |
+| `SMTP_ENCRYPTION_KEY` | **Secret** | Yes for email | Stable base64-encoded 32-byte AES key used to encrypt the SMTP password before saving it. Generate with `openssl rand -base64 32`. |
+| `SMTP_HOST_ALLOWLIST` | Variable | Optional | Comma-separated approved SMTP hostnames, e.g. `smtp.example.com,*.mail.example.net`. When set, only matching hosts are accepted. |
 
-### Required secrets
+The supplied `.dev.vars.example` retains Papillon's project ID and public Web API key. Obtain the complete service-account JSON from Google Cloud Console and place it in the `FIREBASE_SERVICE_ACCOUNT_JSON` secret. Do not split it into `FIREBASE_SERVICE_ACCOUNT_JSON` and the private key inside that service-account JSON; those legacy variables are no longer used. Do not add the service-account JSON or SMTP encryption key to HTML, browser JavaScript, public Firestore documents, or Git.
 
-Use Cloudflare's **Secret** type for each of these values. Do not use a regular variable for a private key or encryption key.
-
-| Name | Cloudflare type | Value format | Value / purpose |
-| --- | --- | --- | --- |
-| `FIREBASE_CLIENT_EMAIL` | **Secret** | String / email address | `client_email` from the dedicated Firestore service-account JSON. Treat the service-account identity as sensitive. |
-| `FIREBASE_PRIVATE_KEY` | **Secret** | String / PKCS#8 PEM | The complete `private_key` from that service-account JSON, including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`. Preserve line breaks or use escaped `\n` sequences. |
-| `SMTP_ENCRYPTION_KEY` | **Secret** | String / encryption key | Stable random key used to encrypt the SMTP password before storing it in private Firestore settings. Generate a fresh key for your own deployment; a 32-byte random value encoded as base64 is recommended. The code also accepts a 64-character hex key or a sufficiently long passphrase. Never copy an example or commit the real value. |
-
-### Local development
-
-Copy `.dev.vars.example` to `.dev.vars` in the project root. The six public Firebase Web values are prefilled for `papillonandco-98c22`; verify them against **Firebase Console → Project settings → Your apps** before use. Fill in `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `SMTP_ENCRYPTION_KEY` with your own backend credentials. Wrangler loads these local values into the Pages Functions environment. Keep `.dev.vars` private and ignored by Git; never commit it. The prefilled Web configuration is public client configuration, not a substitute for the private service-account credentials.
-
-`FIREBASE_PRIVATE_KEY` should be the complete `private_key` value from the downloaded Firebase service-account JSON, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines. It may use real newline characters or escaped `\n` sequences; surrounding quotes are tolerated. The backend now validates the PEM and returns a specific configuration error if the value is malformed. Do not use `private_key_id` or a base64-encoded copy of the PEM. Do not paste the entire service-account JSON into a frontend file. Never put `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, or `SMTP_ENCRYPTION_KEY` in HTML, browser JavaScript, public Firestore documents, or the live-chat snippet.
-
-No Cloudflare KV binding is required. The six Firebase Web configuration values are returned by `GET /api/config`; the service-account credentials and SMTP encryption key must never be returned by that endpoint. After changing a Cloudflare variable or secret, redeploy the Pages project so the deployed Functions use the updated configuration.
-
-### Firebase Authentication dashboard access
-
-The dashboard uses Firebase Authentication (email/password). **Any active Firebase Authentication account can sign in and use the dashboard.** The application does not query an `admins` collection, and it does not require any per-user role document in Firestore.
-
-1. In the Firebase console, select project **`papillonandco-98c22`**.
-2. Open **Authentication → Sign-in method** and enable **Email/Password**.
-3. Open **Authentication → Users** and create an account for each person who should be able to use the dashboard. Sign in at `/dashboard/` with that account.
-4. In **Authentication → Settings → Authorized domains**, make sure the Cloudflare Pages domain and any custom production domain are listed.
-5. In Cloudflare Pages → **Settings → Variables and Secrets**, add the six Firebase Web/project values as regular **Variables** and add `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `SMTP_ENCRYPTION_KEY` as **Secrets**. The project ID must match the Firebase project used by Authentication and Firestore.
-6. Redeploy the Pages project and sign in with any active Firebase Authentication account. The backend verifies the ID token through Firebase Authentication; it does not read an `admins` collection.
-
-**Access impact:** every Firebase Authentication user who can sign in can manage puppy listings and galleries, site metadata, the public phone number/live-chat script, contact email, and SMTP settings. The dashboard does not include an account-registration screen. Create only the intended users in Firebase Authentication; if your project permits self-service sign-up, any newly created account would also receive dashboard access, so restrict account creation separately if you do not want that. No `PAPILLON_ADMIN_EMAIL` or `PAPILLON_ADMIN_PASSWORD` variables are used.
-
-The dashboard sends the current Firebase ID token as an `Authorization: Bearer ...` header to protected API endpoints. The backend checks that Firebase recognizes the token and account. Local storage is used only for UI convenience and is never accepted as proof of authorization.
+Copy `.dev.vars.example` to `.dev.vars` for local Pages development and enter the same values. Keep `.dev.vars` private and ignored by Git. Preserve the same `SMTP_ENCRYPTION_KEY` after saving an SMTP password; rotating it requires re-saving the SMTP password.
 
 ## Firebase and Firestore setup
 
-### 1. Create the Firebase project/database
+### 1. Firebase project and Authentication
 
-1. Open the Firebase console and select the project whose ID will be set in `FIREBASE_PROJECT_ID`.
-2. Create the default Cloud Firestore database in Native mode if one does not exist.
-3. Make sure the database is in the same Google Cloud project as the configured service account.
+1. Use the Firebase project whose ID matches `FIREBASE_PROJECT_ID` (the included template is set to `papillonandco-98c22`).
+2. Create the default Cloud Firestore database in Native mode if it does not exist.
+3. Enable **Authentication → Sign-in method → Email/Password**.
+4. Create the Firebase Authentication account that should administer the site. Add the production and preview domains to Authentication → Settings → Authorized domains.
 
-### 2. Create a Firestore service account
+### 2. Configure the service account
 
-1. In Google Cloud Console → IAM & Admin → Service Accounts, create or select a service account for Papillon.
-2. Grant a least-privilege role that permits the required Firestore data operations, for example **Cloud Datastore User** (`roles/datastore.user`). Follow your organization's policy if it requires a narrower custom role.
-3. Create a service-account key and download its JSON privately.
-4. Copy the `client_email` value to Cloudflare's `FIREBASE_CLIENT_EMAIL` secret and the `private_key` value to `FIREBASE_PRIVATE_KEY`.
-5. Set `FIREBASE_PROJECT_ID` to the Firebase project's exact ID.
-6. Never upload the JSON key to the website root or commit it to Git. After copying the needed values, keep the JSON in an approved secret store or delete the local copy securely.
+1. In Google Cloud Console → IAM & Admin → Service Accounts, create or select a dedicated service account for Papillon.
+2. Grant only the Firestore data permissions required by the project (for example, **Cloud Datastore User**, `roles/datastore.user`, subject to your IAM policy).
+3. Download its JSON key and store the complete JSON object in Cloudflare's `FIREBASE_SERVICE_ACCOUNT_JSON` Secret. The JSON must include `project_id`, `client_email`, and `private_key`, and its project ID must equal `FIREBASE_PROJECT_ID`.
+4. Never upload the JSON key to the website root or commit it to Git.
 
-Server-to-Firestore requests use Google's authenticated REST API. Service-account requests are authorized with Google Cloud IAM and do not rely on public browser Firestore rules. Keep direct browser Firestore access closed unless another, separate feature genuinely needs it and has appropriate security rules.
+### 3. Provision the administrator grant
 
-### 3. Firestore client security rules
+Dashboard access requires both a valid Firebase ID token and a matching Firestore document at `admin/{uid}`. In Firebase Authentication, copy the administrator's UID. Create the Firestore document `admin/{that-uid}` with at least:
 
-The project routes Firestore reads and writes through Cloudflare Pages Functions using the server-side service account. The browser uses Firebase Authentication for dashboard sign-in but does not need direct Firestore access. The included `config/firestore.rules` therefore denies all client SDK reads and writes; server-side service-account requests continue to work because they use Google Cloud IAM and bypass Firestore Security Rules.
+```json
+{
+  "uid": "THE_EXACT_FIREBASE_AUTH_UID",
+  "role": "admin",
+  "active": true
+}
+```
 
-Review the rules file before deploying it if this Firebase project is shared with another application that needs direct client-side Firestore access. Deploy rules using the Firebase CLI or paste the equivalent rules into Firestore → Rules. Do not use broad authenticated-user rules that expose `privateConfig/sitePreferences` or `contactRateLimits`.
+Only create this document for trusted administrators. The dashboard cannot grant itself admin permissions. To revoke access, set `active` to `false` or `status` to `disabled` (or remove the document).
 
-### 4. Verify the configuration
+### 4. Deploy the same deny-all Firestore rules as Movara
 
-After deploy, test `GET /api/puppies`. With valid Firestore settings and no listing documents, it should return an empty list, not sample puppies. If it returns a configuration error, inspect the variable names and service-account key format. Add the first real puppy using the dashboard after signing in with any active Firebase Authentication account.
+The root `firestore.rules` is identical to Movara's client deny-all policy:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+The browser never reads or writes Firestore directly. Cloudflare Pages Functions use the service account and Google Cloud IAM, so server-side reads/writes continue to work with these rules. Deploy with:
+
+```bash
+firebase deploy --only firestore:rules --project papillonandco-98c22
+```
+
+If this Firebase project is shared with another app that depends on direct client Firestore access, review the impact before applying the deny-all rule to that shared database.
+
+### 5. Configuration health checks
+
+- `GET /api/config` should return `apiKey`, `projectId`, and `authDomain` only.
+- `GET /api/health` reports `system`, `smtp`, and `encryption` states without exposing credentials. The Firebase state verifies server-side Firestore access, not merely the presence of variables.
+- After saving SMTP settings, call the administrator-only `POST /api/admin/smtp-test` from the dashboard. It attempts an actual TLS/STARTTLS connection and SMTP authentication but does not send a message.
 
 ## Puppy listings and images
 
 No dummy/demo listing records are included. All listing content comes from Firestore. When there are no listings, the homepage displays a dedicated “No puppy listings yet” state; loading/API failures use a separate temporary-unavailable message. Use the dashboard to create, edit, and remove listings.
 
 ### Firestore data layout
+
+Papillon's existing collections are retained: `puppies`, `siteConfig`, `privateConfig`, and `contactRateLimits`. The integration adds `admin/{uid}` for administrator authorization and `private/smtp` for the standalone SMTP configuration document. Contact recipient email and other private site preferences remain in `privateConfig/sitePreferences`; public branding and scripts remain in `siteConfig/public`, with the social image in `siteConfig/siteOgImage`.
+
 
 **Main document:** `puppies/{slug}` stores fields used for the listing and profile, including `slug`, `name`, `gender`, `coat`, `age`, `price`, `status`, `personality`, `summary`, `details`, `image`, `imageAlt`, `imageSizeBytes`, `galleryCount`, `createdAt`, and `updatedAt`. The main `image` is a JPEG Base64 data URL.
 
@@ -287,7 +267,7 @@ Sign in at `/dashboard/`, open **Preferences**, unlock any fields you need to ed
 
 ### Which storage is used?
 
-**Private Firestore document** — `privateConfig/sitePreferences` contains the contact recipient email and SMTP connection information, including the encrypted SMTP password and IV. It is read only by server-side Pages Functions using the service-account credentials; the Preferences endpoint never returns the encrypted password or IV. Do not put this document in `siteConfig/public`.
+**Private Firestore document** — `privateConfig/sitePreferences` keeps the contact recipient email and existing private site-preference fields. SMTP credentials are stored separately in `private/smtp`, with the password encrypted as a Movara-compatible AES-256-GCM bundle. Both documents are read only by server-side Pages Functions; public APIs never return SMTP passwords, IVs, or ciphertext. Do not put private fields in `siteConfig/public`.
 
 **Public site settings** — Firestore document `siteConfig/public` contains these fields:
 
@@ -324,7 +304,7 @@ It is intentionally not loaded on `404.html` or `/dashboard/`. Treat this field 
 - **Description:** sets the homepage description and is used as fallback where a listing has no summary/details.
 - **Social preview image:** select an image in Preferences; the dashboard converts it to JPEG and requires it to be 240 KiB or smaller. Save Preferences to write the image to `siteConfig/siteOgImage`. Removing the image enables the built-in `assets/images/og-image.jpg` fallback.
 
-Older installations may have browser-local Preferences or values saved in the former KV binding. If old values appear in the same browser, review them, unlock the relevant fields, re-enter the SMTP password, and save Preferences once. Current authoritative public values are read from Firestore `siteConfig/public`; private email and SMTP values are stored in `privateConfig/sitePreferences`. Existing KV data is not automatically migrated, so re-save the contact email and SMTP settings after deploying this version.
+Older installations may have SMTP settings embedded in `privateConfig/sitePreferences`. The Preferences API attempts to migrate those legacy encrypted settings to `private/smtp` on the first administrator Preferences load. If the old password cannot be migrated (for example, the former key is not a base64-encoded 32-byte key), enter the SMTP password again and save. Supplying a new password writes a fresh standalone encrypted record without requiring the legacy ciphertext to decrypt. Existing KV data is not automatically migrated; if your previous deployment used KV, re-enter the contact email and SMTP settings.
 
 ## Instant SEO and social sharing previews
 
@@ -347,41 +327,36 @@ This server-side HTML rewriting is important because many social crawlers do not
 
 ## Contact forms and SMTP
 
-The homepage contact form submits to `POST /api/contact`. The payload includes the visitor's name, email, subject, message, optional puppy name, and a hidden bot-trap field. The `/contact/{slug}` form submits shipping/payment details and the selected listing slug to the same endpoint. The backend:
+The homepage contact form and listing-specific `/contact/{slug}` form both submit to `POST /api/contact`. The backend validates the request, ignores the honeypot, rate-limits each IP using a Firestore transaction in `contactRateLimits`, checks a puppy listing when the enquiry is listing-specific, and sends two emails through the configured SMTP account:
 
-1. checks the request is same-origin and within the body-size limit;
-2. quietly ignores form submissions where the hidden bot-trap field has been filled;
-3. validates the visitor's name and email, plus the required fields for the submitted form;
-4. rate-limits each client IP to five sends per ten minutes using a Firestore transaction on `contactRateLimits/{hashedIp}`;
-5. loads the contact recipient and SMTP settings from the private Firestore document `privateConfig/sitePreferences` and decrypts the SMTP password in the Worker;
-6. reads the puppy listing server-side for listing-specific enquiries;
-7. sends a Papillon-branded HTML email plus a plain-text alternative through the configured SMTP server.
+1. **Studio notification:** sent to the address saved in `privateConfig/sitePreferences.email`. It uses the authenticated SMTP mailbox for the visible `From` and envelope sender, and sets the visitor's submitted email as `Reply-To` so the studio can reply directly.
+2. **Customer confirmation:** sent to the visitor. It uses the same sender branding and deliberately omits `Reply-To` so replies default to the configured `From` address.
 
-The visible email `From` header uses the visitor's submitted name and email, while the authenticated SMTP username remains the envelope sender; the visitor's email is also set as `Reply-To`. The homepage email subject is exactly the form's **Subject** value. Puppy contact emails use the listing title/name in the creative subject `A little hello about {puppy name} 🐾 | Papillon & Co.`.
+The two email attempts run independently. If the studio notification is accepted, the form request is recorded as successfully received even if the customer confirmation cannot be delivered; the response includes `notificationSent` and `confirmationSent` so the frontend can distinguish the outcome. SMTP acceptance is not a guarantee of inbox placement; check spam and provider delivery logs when testing.
 
-This is an ordinary contact-message workflow. It does not generate verification codes or require code expiration. Rate-limit documents store a hashed IP identifier, count, window start, and `expiresAt` timestamp; configure a Firestore TTL policy on `contactRateLimits.expiresAt` to automatically clean up old records. The function reports success only when the SMTP server accepts the message; SMTP acceptance does not guarantee delivery to the inbox instead of spam.
+### SMTP setup and storage
 
-### Configure contact email and SMTP
+1. Set `SMTP_ENCRYPTION_KEY` as a Cloudflare Secret (generate with `openssl rand -base64 32`) and keep it stable.
+2. Sign in to `/dashboard/` using a Firebase account that has an `admin/{uid}` grant.
+3. Open **Preferences → SMTP setup**. Enter host, port (`465`, `587`, or `2525`), SMTP username, From email, and SMTP password. The first save requires the password; subsequent updates can leave it blank to retain the encrypted password.
+4. Save Preferences, then select **Test SMTP connection**. The test verifies transport and authentication; it does not send a test email.
+5. Save the contact recipient email in the site preferences and submit a real contact form to test both email flows.
 
-1. Confirm the Firebase service-account variables are configured and the service account has Firestore read/write access. No `PAPILLON_STORE` binding is required.
-2. Complete the Firebase Authentication setup above and set `SMTP_ENCRYPTION_KEY` in Cloudflare.
-3. Deploy, then visit `/dashboard/` over HTTPS and sign in with the authorized Firebase Authentication user.
-4. Open **Preferences**, unlock **Contact email**, enter the address that should receive enquiries, and unlock the SMTP fields.
-5. Enter the SMTP host, submission port, and username/email. Enter the SMTP password/app password and save. A complete host, port, username, and password is required the first time.
-6. The saved SMTP password is encrypted with AES-GCM before it is stored in the private Firestore document `privateConfig/sitePreferences`; the password is not returned to the dashboard. Keep `SMTP_ENCRYPTION_KEY` stable. If that key is changed, the existing saved SMTP password cannot be decrypted, and you will need to save the password again under the intended key.
-7. Submit a test message from the homepage contact form and then from a `/contact/{slug}` page. Confirm each reaches the configured Contact email, the visitor's name/email appear in the visible From header, homepage Subject is preserved exactly, and puppy enquiry subjects include the listing name.
+SMTP is stored in Firestore at `private/smtp`, matching Movara's document location and schema. The document stores `host`, `port`, `username`, `password` (an AES-256-GCM bundle with `algorithm`, `version`, `iv`, and `ciphertext`), `fromEmail`, `uid`, and `updatedAt`. It does not store `secure`, `security`, `enabled`, or `fromName`. TLS behavior is derived from the port; the sender display name is read from the public site branding in `siteConfig/public`. The SMTP password is encrypted before Firestore write and is never returned to the dashboard.
 
-The visitor's form email and name are used in the visible From header, and the SMTP username is used for the SMTP envelope sender. The visitor email is also set as Reply-To. Some SMTP/email providers may apply anti-spoofing or DMARC checks to a visitor address used in From; if your provider rewrites or rejects that visible identity, the deliverability-friendly option is to use the authenticated mailbox in From and keep the visitor address as Reply-To.
+For older Papillon installations, the Preferences API attempts a one-time migration from the previous encrypted `smtp` object in `privateConfig/sitePreferences` to `private/smtp`. If the old password cannot be decrypted with the current `SMTP_ENCRYPTION_KEY`, the dashboard displays a warning and the password must be re-entered and saved.
 
-### SMTP connection details
+### SMTP transport security
 
-- Port `465` uses implicit TLS (`SSL/TLS`).
-- Other supported submission ports, commonly `587` or `2525`, use `STARTTLS`.
-- Port `25` is rejected because it is unavailable from Cloudflare Workers in this implementation.
-- The SMTP host must be a public hostname or public IP address. Local/private and reserved network addresses are rejected, including addresses detected after the hostname resolves.
-- If a provider requires an app password, use the provider-issued app password rather than the mailbox's normal login password.
+- Port `465` uses implicit TLS.
+- Ports `587` and `2525` require STARTTLS; the transport refuses to continue with credentials if TLS upgrade is unavailable.
+- Port `25` is not supported.
+- The hostname must be public. Local, private, loopback, link-local, and reserved addresses are rejected, including the resolved socket peer IP.
+- `SMTP_HOST_ALLOWLIST`, when set, further restricts SMTP hostnames to the comma-separated allowed hosts. Use this in production where possible.
+- SMTP host and port are validated server-side. Sender identity is controlled by stored configuration, not request payloads.
+- SMTP management, connection testing, and generic `POST /api/send` require a verified administrator and same-origin requests. Generic admin-to-customer emails do not include `Reply-To`.
 
-SMTP settings and the recipient are stored in the private Firestore document `privateConfig/sitePreferences`; the live-chat script, phone, and page metadata are in public Firestore documents. Do not place SMTP values inside `siteConfig/public` or the script snippet.
+The SMTP username/password and sender settings are stored only in the private `private/smtp` document. Contact recipient and other site-specific private settings remain in `privateConfig/sitePreferences`. Neither document is exposed through public APIs or browser SDK access.
 
 ## Local development
 
@@ -399,11 +374,11 @@ Open `http://localhost:8080/`, `http://localhost:8080/shipping/`, or a sample cl
 
 ### Test the actual backend locally
 
-Copy `.dev.vars.example` to `.dev.vars` at the project root, then fill in your Firebase Web configuration, service-account email/private key, and a stable `SMTP_ENCRYPTION_KEY`. Run Pages locally with `npx wrangler pages dev .`; `.dev.vars` supplies local values. No `wrangler.toml` is included intentionally, so Cloudflare Dashboard can manage regular Variables as well as Secrets. If you need to pin a Pages Functions compatibility date, set it in the Cloudflare dashboard under the Pages project's Functions settings for both Production and Preview. `.dev.vars` and `.env*` are excluded by `.gitignore`; never commit real credentials. No KV binding is needed. Use a test Firebase project and test SMTP account, not production customer data. Test with HTTPS/deployed Pages when verifying Firebase ID-token authorization and crawler behavior.
+Copy `.dev.vars.example` to `.dev.vars` at the project root, then fill in `FIREBASE_WEB_API_KEY`, the complete `FIREBASE_SERVICE_ACCOUNT_JSON`, and a stable `SMTP_ENCRYPTION_KEY`. Run Pages locally with `npx wrangler pages dev .`; `.dev.vars` supplies local values. No `wrangler.toml` is included intentionally, so Cloudflare Dashboard can manage regular Variables as well as Secrets. If you need to pin a Pages Functions compatibility date, set it in the Cloudflare dashboard under the Pages project's Functions settings for both Production and Preview. `.dev.vars` and `.env*` are excluded by `.gitignore`; never commit real credentials. No KV binding is needed. Use a test Firebase project and test SMTP account, not production customer data. Test with HTTPS/deployed Pages when verifying Firebase ID-token authorization and crawler behavior.
 
 ## Testing after deployment
 
-Run `npm run validate` from the project root first. It checks required project files, JavaScript syntax, key environment-variable documentation, Firestore default-deny rules, and that the old KV binding is absent from runtime/config files. Then run these checks against the deployed site before announcing it is production-ready. A passing local validation does not prove live Firebase credentials, SMTP delivery, or Cloudflare deployment are working.
+Run `npm run validate` and `npm test` from the project root first. They check required files, JavaScript syntax, the five Movara-compatible variable names, the root and compatibility copies of the Firestore deny-all rules, admin authorization, SMTP encryption, and email header policy. Then run these checks against the deployed site before announcing it is production-ready. A passing local validation does not prove live Firebase credentials, SMTP delivery, or Cloudflare deployment are working.
 
 ### Basic page and route checks
 
@@ -442,19 +417,21 @@ Run `npm run validate` from the project root first. It checks required project f
 - [ ] Save the contact recipient email and a valid SMTP host, port, username, and password in Preferences.
 - [ ] Submit the homepage contact form.
 - [ ] Confirm the receiver gets an HTML-styled email and the plain-text body is available.
-- [ ] Confirm Reply-To is the visitor's submitted email address.
+- [ ] Confirm only the studio notification contains the visitor's email in `Reply-To`; the customer confirmation has no `Reply-To`.
+- [ ] Use **Test SMTP connection** and confirm TLS plus SMTP authentication succeed.
+- [ ] Confirm `private/smtp` contains an AES-256-GCM password bundle and that no password/ciphertext appears in API responses.
 - [ ] Verify invalid input is rejected and repeated submissions are rate-limited.
 
 ## Troubleshooting
 
 | Symptom | What to check |
 | --- | --- |
-| `GET /api/config` says `Missing configuration: FIREBASE_...` | Add all six Web config variables from the Firebase Web app settings, then redeploy. This endpoint is separate from service-account access. |
-| `/api/puppies` returns 503 or reports an invalid private key | Set `FIREBASE_PROJECT_ID` to the project ID; set `FIREBASE_CLIENT_EMAIL` to `client_email`; set `FIREBASE_PRIVATE_KEY` to the complete `private_key` PEM value, including BEGIN/END lines. Real newlines and escaped `\n` are supported. Do not paste `private_key_id`. Redeploy after changing Cloudflare secrets. |
-| `/api/puppies` reports Firestore permission denied | Confirm the project ID matches the Firebase project, Firestore is initialized in Native mode, and the service account identified by `FIREBASE_CLIENT_EMAIL` has the **Cloud Datastore User** (`roles/datastore.user`) role on that Google Cloud project. Check Cloudflare Pages Function logs for the exact status. |
+| `GET /api/config` says browser Firebase configuration is incomplete | Set `FIREBASE_PROJECT_ID` and `FIREBASE_WEB_API_KEY`, then redeploy. |
+| `/api/puppies` returns 503 or reports an invalid service account | Set `FIREBASE_PROJECT_ID` and the complete JSON in `FIREBASE_SERVICE_ACCOUNT_JSON`. Confirm the JSON has `project_id`, `client_email`, and `private_key`, and that its `project_id` matches. Redeploy after changing the secret. |
+| `/api/puppies` reports Firestore permission denied | Confirm the project ID matches the Firebase project, Firestore is initialized in Native mode, and the service account identified by `FIREBASE_SERVICE_ACCOUNT_JSON` has the **Cloud Datastore User** (`roles/datastore.user`) role on that Google Cloud project. Check Cloudflare Pages Function logs for the exact status. |
 | Firestore returns permission/access errors | Make sure the service account belongs to the same Google Cloud project and has a Firestore data role allowing the operations used by this site. |
-| Dashboard sign-in is rejected | Confirm Email/Password is enabled, the six Firebase Web config variables are correct, the account is enabled in Firebase Authentication, and `/api/admin-session` returns a successful authenticated response. No `admins` Firestore document is required. Check the Firebase API key and Pages Function logs if verification fails. |
-| Preferences or contact form says storage is unavailable | Check `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`, confirm the service account can access Firestore, and inspect Pages Function logs. No KV binding is required. |
+| Dashboard sign-in is rejected | Confirm Email/Password is enabled, `FIREBASE_PROJECT_ID` and `FIREBASE_WEB_API_KEY` are correct, the Firebase account is enabled, and `admin/{uid}` exists with the exact UID, `role: "admin"`, and `active: true`. Check `/api/admin-session` and Pages Function logs. |
+| Preferences or contact form says storage is unavailable | Check `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON`, and the private key inside that service-account JSON, confirm the service account can access Firestore, and inspect Pages Function logs. No KV binding is required. |
 | Saved SMTP password cannot be decrypted | `SMTP_ENCRYPTION_KEY` likely changed since the password was saved. Restore the original key, or set the intended key and re-enter/re-save the SMTP password. |
 | SMTP connection/authentication fails | Verify the SMTP host, provider port, username, app password, TLS requirements, and sender permission. Port 465 uses SSL/TLS; 587/2525 typically use STARTTLS; port 25 is unsupported. |
 | Contact form shows the generic send failure | Check Pages Function logs for `Papillon contact email send failed`. Verify the `SMTP_ENCRYPTION_KEY` has not changed since saving the password, then inspect the logged stage (SMTP connection, TLS, authentication, sender, recipient, or message delivery). SMTP's connected peer address is read from the result of `socket.opened`. |
@@ -496,13 +473,15 @@ Decorative hero/about photos and their crop versions live under `assets/images/s
 
 ## Security and maintenance
 
-- Keep `FIREBASE_PRIVATE_KEY` and `SMTP_ENCRYPTION_KEY` as server-side Cloudflare secrets. Do not put them in HTML, JavaScript, public Firestore fields, or the live-chat snippet.
-- Keep `privateConfig/sitePreferences` and `contactRateLimits` inaccessible to browser clients through Firestore Security Rules. Server-side Pages Functions access these documents with the service account. No Cloudflare KV binding is used.
-- Dashboard access uses valid Firebase Authentication ID tokens. No Firestore `admins` allowlist is used. Do not rely on localStorage for access control. Sign in over HTTPS in production and log out on shared devices.
+- Keep `FIREBASE_SERVICE_ACCOUNT_JSON` and `SMTP_ENCRYPTION_KEY` as server-side Cloudflare Secrets. Never put them in HTML, browser JavaScript, public Firestore fields, or the live-chat snippet.
+- Keep `admin`, `private`, `privateConfig`, and `contactRateLimits` inaccessible to browser clients through the deny-all Firestore rules. Server-side Pages Functions access these documents using the service account and verify administrator ID tokens against `admin/{uid}`.
+- SMTP passwords are encrypted using AES-256-GCM before being stored at `private/smtp`; the password is never returned by APIs. Keep `SMTP_ENCRYPTION_KEY` stable and use `SMTP_HOST_ALLOWLIST` to restrict permitted providers where possible.
+- No Cloudflare KV binding is used.
+- Dashboard access requires both a valid Firebase Authentication ID token and an explicit `admin/{uid}` Firestore grant. Do not rely on localStorage for access control. Sign in over HTTPS in production and log out on shared devices.
 - The SMTP password is encrypted at rest with AES-GCM. Do not change `SMTP_ENCRYPTION_KEY` without a planned credential re-encryption or reset.
 - The `siteConfig/public` values, phone number and live-chat snippet are public configuration by design. Assume anyone can retrieve the configured snippet and phone number. Do not save secrets there.
-- A live-chat snippet can execute arbitrary provider JavaScript on the pages where it is included. Any signed-in dashboard user can edit it, so only trusted provider code should be pasted.
-- Firestore writes are server-side and mutations require a valid Firebase ID token from any active Firebase Authentication account. Every user who can sign in can manage puppy listings, public site settings, contact recipient details, and SMTP settings. Do not make public `POST`/`DELETE` listing APIs unauthenticated.
+- A live-chat snippet can execute arbitrary provider JavaScript on the pages where it is included. Any authorized administrator can edit it, so only trusted provider code should be pasted.
+- Firestore writes are server-side and dashboard mutations require a valid Firebase ID token plus the matching active `admin/{uid}` grant. Only explicitly provisioned administrators can manage puppy listings, public site settings, contact recipient details, and SMTP settings. Do not make public `POST`/`DELETE` listing APIs unauthenticated.
 - Contact submissions are constrained by validation, same-origin checking, a bot-trap field, body-size limits, and a short rate-limit window, but you should still monitor usage and provider logs.
 - Use a test deployment for large changes, keep a known-good deployment available for rollback, and test a real enquiry after changing SMTP or secrets.
 - Use images and puppy descriptions truthfully, and review all public listing details before publication.

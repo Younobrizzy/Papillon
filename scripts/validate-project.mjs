@@ -12,7 +12,8 @@ const requiredFiles = [
   'functions/api/puppies.js', 'functions/api/preferences.js', 'functions/api/public-scripts.js',
   'functions/api/contact.js', 'functions/api/og-image.js', 'functions/lib/private-firestore.js', 'functions/lib/firestore-document-size.js',
   'functions/lib/admin-session.js', 'functions/lib/crypto.js', 'functions/lib/smtp.js',
-  'config/firestore.rules', 'assets/icons/site.webmanifest', 'scripts/dev-server.cjs', '.dev.vars.example', 'README.md'
+  'config/firestore.rules', 'firestore.rules', 'firebase.json', 'functions/lib/require-admin.js', 'functions/lib/smtp-config.js',
+  'functions/api/health.js', 'functions/api/send.js', 'functions/api/admin/smtp-test.js', 'assets/icons/site.webmanifest', 'scripts/dev-server.cjs', '.dev.vars.example', 'README.md'
 ];
 
 for (const relative of requiredFiles) {
@@ -58,7 +59,10 @@ const runtimeAuthSources = files
   .map(file => fs.readFileSync(file, 'utf8'))
   .join('\n');
 if (/documents\/admins\/|isAdministrator\s*\(|readAdminSession\s*\(/.test(runtimeAuthSources)) {
-  errors.push('Firestore role-allowlist code must not be present; dashboard access uses Firebase Authentication only.');
+  errors.push('Legacy plural-admin authorization patterns must not be present.');
+}
+if (!runtimeAuthSources.includes('admin/${user.uid}') || !runtimeAuthSources.includes("data.role === 'admin'")) {
+  errors.push('Privileged dashboard operations must verify the admin/{uid} Firestore grant.');
 }
 const sourceFiles = files.filter(file => /\.(?:m?js|cjs)$/.test(file));
 for (const file of sourceFiles) {
@@ -121,17 +125,26 @@ const contact = fs.readFileSync(path.join(root, 'functions/api/contact.js'), 'ut
 const smtpSource = fs.readFileSync(path.join(root, 'functions/lib/smtp.js'), 'utf8');
 if (!smtpSource.includes('const socketInfo = await withTimeout(socket.opened') || !smtpSource.includes('const remoteAddress = socketInfo?.remoteAddress') || smtpSource.includes('socket.remoteAddress')) errors.push('SMTP must read remoteAddress from the SocketInfo returned by socket.opened.');
 
-for (const name of ['FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_AUTH_DOMAIN', 'FIREBASE_STORAGE_BUCKET', 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_APP_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'SMTP_ENCRYPTION_KEY']) {
+for (const name of ['FIREBASE_PROJECT_ID', 'FIREBASE_WEB_API_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON', 'SMTP_ENCRYPTION_KEY', 'SMTP_HOST_ALLOWLIST']) {
   if (!varsExample.includes(name)) errors.push(`Missing ${name} from .dev.vars.example`);
   if (!readme.includes(name)) errors.push(`Missing ${name} from README setup documentation`);
 }
+if (/FIREBASE_CLIENT_EMAIL|FIREBASE_PRIVATE_KEY|FIREBASE_API_KEY=/.test(varsExample)) errors.push('Legacy split Firebase service-account/API key variables must be removed from .dev.vars.example.');
 if (!/allow\s+read,\s*write:\s*if\s+false\s*;/.test(rules)) errors.push('Firestore browser rules must remain default-deny.');
+const rootRules = fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8');
+if (rootRules !== rules) errors.push('Root firestore.rules and config/firestore.rules must remain identical.');
+const firebaseJson = JSON.parse(fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'));
+if (firebaseJson?.firestore?.rules !== 'firestore.rules') errors.push('firebase.json must deploy the root firestore.rules file.');
 const preferencesApi = fs.readFileSync(path.join(root, 'functions/api/preferences.js'), 'utf8');
-if (!preferencesApi.includes('privateConfig/sitePreferences') || !contact.includes('privateConfig/sitePreferences')) errors.push('Private Preferences must use privateConfig/sitePreferences in both Preferences and contact APIs.');
+if (!preferencesApi.includes('privateConfig/sitePreferences') || !contact.includes('privateConfig/sitePreferences')) errors.push('Private contact Preferences must use privateConfig/sitePreferences in both Preferences and contact APIs.');
+const smtpConfig = fs.readFileSync(path.join(root, 'functions/lib/smtp-config.js'), 'utf8');
+if (!smtpConfig.includes("const SMTP_PATH = 'private/smtp'")) errors.push('SMTP settings must be saved to the standalone private/smtp Firestore document.');
+const adminGuard = fs.readFileSync(path.join(root, 'functions/lib/require-admin.js'), 'utf8');
+if (!adminGuard.includes("data.role === 'admin'") || !adminGuard.includes('admin/${user.uid}')) errors.push('Privileged APIs must require the admin/{uid} Firestore grant.');
 if (!contact.includes('consumeContactRateLimit')) errors.push('Contact endpoint must use the Firestore rate limiter.');
 if (/PAPILLON_STORE/.test(files.filter(file => /\.(?:js|html|toml|json)$/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n'))) errors.push('PAPILLON_STORE reference remains in runtime/config files.');
 if (/FIREBASE_PRIVATE_KEY\s*[:=]\s*["']-----BEGIN PRIVATE KEY-----/.test(files.filter(file => !file.endsWith('.dev.vars.example')).map(file => fs.readFileSync(file, 'utf8')).join('\n'))) errors.push('Possible hard-coded Firebase private key found.');
-if (!readme.includes('No Cloudflare KV binding is required')) warnings.push('README should clearly state that no Cloudflare KV binding is required.');
+if (!readme.includes('No KV binding is required') && !readme.includes('No Cloudflare KV binding is required')) warnings.push('README should clearly state that no Cloudflare KV binding is required.');
 
 if (errors.length) {
   console.error(`Project validation failed (${errors.length} error(s), ${warnings.length} warning(s)):`);

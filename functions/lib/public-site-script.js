@@ -1,4 +1,4 @@
-import { getFirebaseSigningKey } from './firebase-key.js';
+import { getFirebaseSigningKey, getFirebaseServiceAccount } from './firebase-key.js';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const encoder = new TextEncoder();
@@ -14,18 +14,10 @@ function base64UrlEncode(value) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-function assertFirestoreConfig(env) {
-  if (!String(env.FIREBASE_PROJECT_ID || '').trim() || !String(env.FIREBASE_CLIENT_EMAIL || '').trim() || !String(env.FIREBASE_PRIVATE_KEY || '').trim()) {
-    const error = new Error('Firestore server credentials are not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Cloudflare.');
-    error.status = 503;
-    throw error;
-  }
-}
-
 async function getAccessToken(env) {
-  assertFirestoreConfig(env);
+  const account = getFirebaseServiceAccount(env);
   if (cachedAccessToken && cachedAccessTokenExpiry > Date.now() + 60_000) return cachedAccessToken;
-  const clientEmail = String(env.FIREBASE_CLIENT_EMAIL || '').trim();
+  const clientEmail = account.clientEmail;
   const now = Math.floor(Date.now() / 1000);
   const header = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64UrlEncode(JSON.stringify({
@@ -46,7 +38,7 @@ async function getAccessToken(env) {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok || !result.access_token) {
-    const error = new Error('Google OAuth could not issue a Firestore access token. Check the service-account email and private key in Cloudflare.');
+    const error = new Error('Google OAuth could not issue a Firestore access token. Check FIREBASE_SERVICE_ACCOUNT_JSON and its Firestore IAM permissions.');
     error.status = 503;
     throw error;
   }

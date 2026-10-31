@@ -1,4 +1,4 @@
-import { getFirebaseSigningKey } from './firebase-key.js';
+import { getFirebaseSigningKey, getFirebaseServiceAccount } from './firebase-key.js';
 
 const encoder = new TextEncoder();
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -18,8 +18,8 @@ function getBearerToken(request) {
 }
 
 async function verifyFirebaseIdToken(idToken, env) {
-  const apiKey = String(env.FIREBASE_API_KEY || '').trim();
-  if (!apiKey) throw new Error('FIREBASE_API_KEY is not configured.');
+  const apiKey = String(env.FIREBASE_WEB_API_KEY || '').trim();
+  if (!apiKey) throw new Error('FIREBASE_WEB_API_KEY is not configured.');
   if (!idToken || idToken.length > 8192) return null;
   const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
@@ -35,9 +35,7 @@ async function verifyFirebaseIdToken(idToken, env) {
 
 export async function getFirestoreAccessToken(env) {
   if (cachedGoogleToken && cachedGoogleTokenExpiry > Date.now() + 60_000) return cachedGoogleToken;
-  const projectId = String(env.FIREBASE_PROJECT_ID || '').trim();
-  const clientEmail = String(env.FIREBASE_CLIENT_EMAIL || '').trim();
-  if (!projectId || !clientEmail || !String(env.FIREBASE_PRIVATE_KEY || '').trim()) throw new Error('Firestore service-account credentials are not configured.');
+  const { projectId, clientEmail } = getFirebaseServiceAccount(env);
   const now = Math.floor(Date.now() / 1000);
   const header = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64UrlEncode(JSON.stringify({ iss: clientEmail, scope: 'https://www.googleapis.com/auth/datastore', aud: GOOGLE_TOKEN_URL, iat: now, exp: now + 3600 }));

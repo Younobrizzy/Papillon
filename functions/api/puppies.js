@@ -1,5 +1,6 @@
-import { cleanText, jsonResponse, readFirebaseSession, sameOriginRequest } from '../lib/admin-session.js';
-import { getFirebaseSigningKey } from '../lib/firebase-key.js';
+import { cleanText, jsonResponse, sameOriginRequest } from '../lib/admin-session.js';
+import { requireAdmin } from '../lib/require-admin.js';
+import { getFirebaseSigningKey, getFirebaseServiceAccount } from '../lib/firebase-key.js';
 import { assertFirestoreDocumentFits } from '../lib/firestore-document-size.js';
 
 const MAX_IMAGE_BYTES = 240 * 1024;
@@ -37,14 +38,15 @@ function documentResourceName(env, path) {
 }
 
 function missingServiceConfig(env) {
-  return !firebaseProjectId(env) || !String(env.FIREBASE_CLIENT_EMAIL || '').trim() || !String(env.FIREBASE_PRIVATE_KEY || '').trim();
+  try { getFirebaseServiceAccount(env); return false; } catch { return true; }
 }
 
 async function getAccessToken(env) {
   if (cachedAccessToken && cachedAccessTokenExpiry > Date.now() + 60_000) return cachedAccessToken;
-  const clientEmail = String(env.FIREBASE_CLIENT_EMAIL || '').trim();
+  const account = getFirebaseServiceAccount(env);
+  const clientEmail = account.clientEmail;
   if (missingServiceConfig(env)) {
-    const error = new Error('Firestore server credentials are not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Cloudflare.');
+    const error = new Error('Firestore server credentials are not configured. Set FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_JSON in Cloudflare.');
     error.status = 503;
     throw error;
   }
@@ -71,7 +73,7 @@ async function getAccessToken(env) {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok || !result.access_token) {
-    const error = new Error('Google OAuth could not issue a Firestore access token. Check the service-account email and private key in Cloudflare.');
+    const error = new Error('Google OAuth could not issue a Firestore access token. Check FIREBASE_SERVICE_ACCOUNT_JSON and its Firestore IAM permissions.');
     error.status = 503;
     throw error;
   }
@@ -267,9 +269,14 @@ function getMutationOriginError(context) {
 async function authorizeDashboardUser(context) {
   const originError = getMutationOriginError(context);
   if (originError) return { response: originError };
-  const session = await readFirebaseSession(context.request, context.env);
-  if (!session) return { response: jsonResponse({ error: 'Sign in to the dashboard before managing puppy listings.' }, 401) };
-  return { session };
+  try {
+    const session = await requireAdmin(context.request, context.env);
+    return { session };
+  } catch (error) {
+    const status = Number(error?.status) || 503;
+    const message = status === 401 || status === 403 ? error.message : 'Administrator access could not be verified. Please try again.';
+    return { response: jsonResponse({ error: message }, status) };
+  }
 }
 
 function errorResponse(error, fallback) {

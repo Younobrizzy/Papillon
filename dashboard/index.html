@@ -266,11 +266,22 @@
                 </div>
               </div>
               <div class="dashboard-field locked-field field-full">
+                <div class="field-label-row"><label for="preference-smtp-from-email">From email</label></div>
+                <div class="field-lockable-control">
+                  <input id="preference-smtp-from-email" name="smtpFromEmail" type="email" autocomplete="email" placeholder="hello@example.com" disabled />
+                  <button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-from-email" aria-label="Unlock From email" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span></button>
+                </div>
+              </div>
+              <div class="dashboard-field locked-field field-full">
                 <div class="field-label-row"><label for="preference-smtp-password">SMTP password</label></div>
                 <div class="field-lockable-control">
                   <input id="preference-smtp-password" name="smtpPassword" type="password" autocomplete="new-password" placeholder="Enter SMTP password" disabled />
                   <button class="field-lock-toggle" type="button" data-lock-target="preference-smtp-password" aria-label="Unlock SMTP password" aria-pressed="false"><span class="lock-toggle-icon" aria-hidden="true"></span></button>
                 </div>
+              </div>
+              <div class="dashboard-field field-full smtp-test-row">
+                <button class="secondary-button" type="button" id="smtp-test-button">Test SMTP connection</button>
+                <p class="form-feedback" id="smtp-test-feedback" role="status" aria-live="polite"></p>
               </div>
               </div>
             </section>

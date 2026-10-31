@@ -1,64 +1,90 @@
-import { encryptSecret } from '../lib/crypto.js';
-import { jsonResponse, readFirebaseSession, sameOriginRequest, validEmail, cleanText } from '../lib/admin-session.js';
-import { validateSmtpHost } from '../lib/smtp.js';
+import { jsonResponse, sameOriginRequest, validEmail, cleanText } from '../lib/admin-session.js';
+import { requireAdmin } from '../lib/require-admin.js';
 import { readPublicSiteScript, readPublicSiteOgImage, writePublicSiteScript } from '../lib/public-site-script.js';
 import { getPrivateDocument, setPrivateDocument } from '../lib/private-firestore.js';
+import { getSafeSmtpSettings, migrateLegacySmtp, saveSmtpSettings } from '../lib/smtp-config.js';
 
 const PRIVATE_PREFERENCES_PATH = 'privateConfig/sitePreferences';
 
+function authError(error) {
+  const status = Number(error?.status) || 503;
+  return jsonResponse({ error: status === 401 || status === 403 ? error.message : 'Administrator access could not be verified. Please try again.' }, status);
+}
+
+function legacySmtpSummary(preferences) {
+  const smtp = preferences?.smtp || {};
+  return {
+    host: String(smtp.host || ''),
+    port: Number(smtp.port || 0) || '',
+    username: String(smtp.username || ''),
+    fromEmail: String(smtp.fromEmail || smtp.username || ''),
+    hasPassword: Boolean(smtp.passwordCiphertext && smtp.passwordIv)
+  };
+}
+
 export async function onRequestGet(context) {
-  if (!await readFirebaseSession(context.request, context.env)) return jsonResponse({ error: 'Sign in to manage preferences.' }, 401);
+  let session;
+  try { session = await requireAdmin(context.request, context.env); }
+  catch (error) { return authError(error); }
+
   let saved;
   try {
-    saved = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH);
+    saved = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH) || {};
   } catch (error) {
-    console.error('Could not read private Preferences from Firestore:', error);
+    console.error('Could not read private Preferences:', error);
     return jsonResponse({ error: 'Preferences could not be loaded. Please try again later.' }, error?.status || 503);
   }
-  const preferences = saved && typeof saved === 'object' ? saved : {};
-  let publicScript = String(preferences.script || '');
-  let publicPhoneNumber = String(preferences.phoneNumber || '');
+
+  let smtp;
+  let smtpMigrationWarning = '';
+  try {
+    const migrated = await migrateLegacySmtp(context.env, saved, session.uid);
+    smtp = migrated ? await getSafeSmtpSettings(context.env) : legacySmtpSummary(saved);
+  } catch (error) {
+    console.error('Legacy SMTP migration could not be completed:', error?.message || error);
+    smtp = legacySmtpSummary(saved);
+    smtpMigrationWarning = 'Existing SMTP settings need to be saved again. Confirm the SMTP encryption key is a base64-encoded 32-byte value.';
+  }
+
   let publicDocument = { exists: false, siteTitle: '', siteBranding: '', siteDescription: '', hasSiteOgImage: false };
   let publicSiteOgImage = '';
+  let publicScript = String(saved.script || '');
+  let publicPhoneNumber = String(saved.phoneNumber || '');
   try {
     publicDocument = await readPublicSiteScript(context.env);
     if (publicDocument.exists) {
       publicScript = publicDocument.script;
       publicPhoneNumber = publicDocument.phoneNumber || '';
     }
-    try {
-      publicSiteOgImage = await readPublicSiteOgImage(context.env);
-    } catch (imageError) {
-      console.error('Could not read public social preview image:', imageError);
-    }
+    try { publicSiteOgImage = await readPublicSiteOgImage(context.env); }
+    catch (imageError) { console.error('Could not read public social preview image:', imageError); }
   } catch (error) {
-    // Keep dashboard access available while server-side Firestore configuration is being repaired.
-    console.error('Could not read public site script from Firestore:', error);
+    console.error('Could not read public site settings:', error);
   }
+
   return jsonResponse({
     success: true,
     configured: Boolean(saved),
+    smtpMigrationWarning,
     preferences: {
-      email: String(preferences.email || ''),
+      email: String(saved.email || ''),
       script: publicScript,
       phoneNumber: publicPhoneNumber,
-      siteTitle: String((publicDocument && publicDocument.siteTitle) || ''),
-      siteBranding: String((publicDocument && publicDocument.siteBranding) || ''),
-      siteDescription: String((publicDocument && publicDocument.siteDescription) || ''),
+      siteTitle: String(publicDocument.siteTitle || ''),
+      siteBranding: String(publicDocument.siteBranding || ''),
+      siteDescription: String(publicDocument.siteDescription || ''),
       siteOgImage: publicSiteOgImage,
-      smtp: {
-        host: String(preferences.smtp?.host || ''),
-        port: Number(preferences.smtp?.port || 0) || '',
-        username: String(preferences.smtp?.username || ''),
-        hasPassword: Boolean(preferences.smtp?.passwordCiphertext && preferences.smtp?.passwordIv)
-      }
+      smtp
     }
   });
 }
 
 export async function onRequestPost(context) {
   if (!sameOriginRequest(context.request)) return jsonResponse({ error: 'Request origin is not allowed.' }, 403);
-  if (!await readFirebaseSession(context.request, context.env)) return jsonResponse({ error: 'Your Firebase sign-in has expired or is no longer valid. Please sign in again.' }, 401);
+  let session;
+  try { session = await requireAdmin(context.request, context.env); }
+  catch (error) { return authError(error); }
+
   let body;
   try {
     const raw = await context.request.text();
@@ -66,7 +92,7 @@ export async function onRequestPost(context) {
     body = JSON.parse(raw);
   } catch { return jsonResponse({ error: 'Invalid preferences payload.' }, 400); }
 
-  const email = cleanText(body?.email, 254);
+  const email = cleanText(body?.email, 254).toLowerCase();
   const script = String(body?.script || '');
   const siteTitle = cleanText(body?.siteTitle, 120);
   const siteBranding = cleanText(body?.siteBranding, 80);
@@ -92,69 +118,57 @@ export async function onRequestPost(context) {
   }
 
   let existing;
-  try {
-    existing = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH) || {};
-  } catch (error) {
-    console.error('Could not read existing private Preferences from Firestore:', error);
+  try { existing = await getPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH) || {}; }
+  catch (error) {
+    console.error('Could not read existing private Preferences:', error);
     return jsonResponse({ error: 'Existing Preferences could not be read. Please try again.' }, error?.status || 503);
-  }
-  const submittedSmtp = body?.smtp && typeof body.smtp === 'object' ? body.smtp : {};
-  const host = cleanText(submittedSmtp.host, 253).toLowerCase().replace(/\.$/, '');
-  const portRaw = String(submittedSmtp.port ?? '').trim();
-  const port = portRaw ? Number(portRaw) : 0;
-  const username = cleanText(submittedSmtp.username, 254);
-  const password = String(submittedSmtp.password || '');
-  const hasAnySmtpValue = Boolean(host || portRaw || username || password);
-  let smtp = { ...(existing.smtp || {}) };
-
-  if (hasAnySmtpValue) {
-    if (!host || !portRaw || !username) return jsonResponse({ error: 'Complete the SMTP host, port, and username.' }, 400);
-    if (!Number.isInteger(port) || port < 1 || port > 65535 || port === 25) return jsonResponse({ error: 'Enter a valid SMTP submission port (465, 587, or 2525 are commonly supported; port 25 is unavailable).'}, 400);
-    if (!validEmail(username)) return jsonResponse({ error: 'Use the SMTP account email address as the SMTP username.' }, 400);
-    try { validateSmtpHost(host); } catch (error) { return jsonResponse({ error: error?.message || 'Invalid SMTP host.' }, 400); }
-
-    let passwordCiphertext = smtp.passwordCiphertext || '';
-    let passwordIv = smtp.passwordIv || '';
-    if (password) {
-      if (password.length > 2048) return jsonResponse({ error: 'SMTP password is too long.' }, 400);
-      try {
-        const encrypted = await encryptSecret(password, context.env);
-        passwordCiphertext = encrypted.ciphertext;
-        passwordIv = encrypted.iv;
-      } catch (error) {
-        console.error('SMTP password encryption failed:', error);
-        return jsonResponse({ error: 'SMTP encryption is not configured on the server.' }, 503);
-      }
-    }
-    if (!passwordCiphertext || !passwordIv) return jsonResponse({ error: 'Enter the SMTP password before saving SMTP settings.' }, 400);
-
-    smtp = {
-      host,
-      port,
-      security: port === 465 ? 'ssl' : 'starttls',
-      username,
-      passwordCiphertext,
-      passwordIv
-    };
-  } else {
-    smtp = {};
   }
 
   try {
     await writePublicSiteScript(context.env, script, phoneNumber, { siteTitle, siteBranding, siteDescription, siteOgImage });
   } catch (error) {
-    console.error('Could not save public site script to Firestore:', error);
+    console.error('Could not save public site settings:', error);
     return jsonResponse({ error: 'The site settings could not be saved. Please check the values and try again.' }, error?.status || 503);
   }
 
-  // Private contact recipient and encrypted SMTP credentials live in a separate
-  // Firestore document; never place them in siteConfig/public or a browser response.
-  const preferences = { email, smtp, updatedAt: new Date().toISOString() };
+  // The contact recipient remains in Papillon's existing private preferences
+  // document. SMTP credentials are written separately to the Movara-compatible
+  // private/smtp document and are never embedded in this preferences response.
   try {
-    await setPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH, preferences);
+    const { smtp: _legacySmtp, ...preservedPrivatePreferences } = existing;
+    await setPrivateDocument(context.env, PRIVATE_PREFERENCES_PATH, {
+      ...preservedPrivatePreferences,
+      email,
+      updatedAt: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('Could not save private Preferences to Firestore:', error);
-    return jsonResponse({ error: 'Preferences could not be saved. Please check the server configuration and try again.' }, error?.status || 503);
+    console.error('Could not save private contact Preferences:', error);
+    return jsonResponse({ error: 'Preferences could not be saved. Please try again.' }, error?.status || 503);
   }
-  return jsonResponse({ success: true, message: 'Preferences saved successfully.' });
+
+  const submittedSmtp = body?.smtp && typeof body.smtp === 'object' ? body.smtp : {};
+  const hasAnySmtpValue = Boolean(
+    String(submittedSmtp.host || '').trim() || String(submittedSmtp.port ?? '').trim() ||
+    String(submittedSmtp.username || '').trim() || String(submittedSmtp.fromEmail || '').trim() ||
+    String(submittedSmtp.password || '')
+  );
+  let smtpSettings;
+  try {
+    // Preserve any old embedded SMTP settings during one-time migration.
+    if (existing.smtp && !String(submittedSmtp.password || '') && !await getPrivateDocument(context.env, 'private/smtp')) {
+      await migrateLegacySmtp(context.env, existing, session.uid);
+    }
+    smtpSettings = hasAnySmtpValue
+      ? await saveSmtpSettings(context.env, submittedSmtp, session.uid, existing)
+      : await getSafeSmtpSettings(context.env);
+  } catch (error) {
+    console.error('Could not save SMTP configuration:', error?.message || error);
+    return jsonResponse({ error: error?.message || 'SMTP settings could not be saved securely.' }, error?.status || 503);
+  }
+
+  return jsonResponse({
+    success: true,
+    message: 'Preferences saved successfully.',
+    smtp: smtpSettings
+  });
 }

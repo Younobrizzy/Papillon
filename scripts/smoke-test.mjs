@@ -1,30 +1,39 @@
 import assert from 'node:assert/strict';
-import { encryptSecret, decryptSecret } from '../functions/lib/crypto.js';
+import { encryptSecret, decryptSecret, encryptSmtpPassword, decryptSmtpPassword, isValidSmtpEncryptionKey } from '../functions/lib/crypto.js';
 import { readFirebaseSession } from '../functions/lib/admin-session.js';
 import { generateKeyPairSync } from 'node:crypto';
-import { getFirebaseSigningKey } from '../functions/lib/firebase-key.js';
+import { getFirebaseSigningKey, getFirebaseServiceAccount } from '../functions/lib/firebase-key.js';
 import { assertFirestoreDocumentFits, estimateFirestoreDocumentSizeBytes, FIRESTORE_DOCUMENT_LIMIT_BYTES, FIRESTORE_DOCUMENT_MAX_SAFE_BYTES } from '../functions/lib/firestore-document-size.js';
 
-// Firebase service-account key parsing accepts common Cloudflare secret formats.
+// Firebase service-account JSON is the only server credential binding.
 const { privateKey: generatedPrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const validPem = generatedPrivateKey.export({ type: 'pkcs8', format: 'pem' });
-const keyVariants = [
-  validPem,
-  validPem.replace(/\n/g, '\\n'),
-  JSON.stringify(validPem),
-  JSON.stringify({ type: 'service_account', client_email: 'smoke-test@example.iam.gserviceaccount.com', private_key: validPem })
+const serviceAccount = {
+  type: 'service_account',
+  project_id: 'papillonandco-98c22',
+  client_email: 'smoke-test@example.iam.gserviceaccount.com',
+  private_key: validPem
+};
+const serviceAccountVariants = [
+  JSON.stringify(serviceAccount),
+  JSON.stringify({ ...serviceAccount, private_key: validPem.replace(/\n/g, '\\n') })
 ];
-for (const keyValue of keyVariants) {
-  const signingKey = await getFirebaseSigningKey({
-    FIREBASE_CLIENT_EMAIL: 'smoke-test@example.iam.gserviceaccount.com',
-    FIREBASE_PRIVATE_KEY: keyValue
-  });
-  assert.ok(signingKey, 'a valid service-account private key format should import');
+for (const serviceAccountJson of serviceAccountVariants) {
+  const env = { FIREBASE_PROJECT_ID: 'papillonandco-98c22', FIREBASE_SERVICE_ACCOUNT_JSON: serviceAccountJson };
+  const parsed = getFirebaseServiceAccount(env);
+  assert.equal(parsed.projectId, 'papillonandco-98c22');
+  assert.equal(parsed.clientEmail, serviceAccount.client_email);
+  assert.ok(await getFirebaseSigningKey(env), 'valid complete service-account JSON imports');
 }
 await assert.rejects(
-  () => getFirebaseSigningKey({ FIREBASE_CLIENT_EMAIL: 'smoke-test@example.iam.gserviceaccount.com', FIREBASE_PRIVATE_KEY: 'not-a-private-key' }),
-  /complete PKCS#8 private_key PEM/,
-  'malformed private key values should return a clear configuration error'
+  () => getFirebaseSigningKey({ FIREBASE_PROJECT_ID: 'papillonandco-98c22', FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify({ ...serviceAccount, private_key: 'not-a-private-key' }) }),
+  /FIREBASE_SERVICE_ACCOUNT_JSON private_key is not a valid PKCS#8 RSA key/,
+  'malformed service-account private keys return a clear configuration error'
+);
+assert.throws(
+  () => getFirebaseServiceAccount({ FIREBASE_PROJECT_ID: 'other-project', FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify(serviceAccount) }),
+  /project_id does not match FIREBASE_PROJECT_ID/,
+  'the service account project must match the configured Firebase project'
 );
 
 // Firestore document-size accounting includes the document path, field names,
@@ -63,8 +72,23 @@ await assert.rejects(
   /at least 16 characters/,
   'short encryption keys must be rejected'
 );
-// Firebase Authentication alone gates dashboard access. A verified account is
-// accepted without making an extra Firestore/admin-document request.
+// New SMTP credentials use the exact Movara AES-256-GCM bundle format.
+const strictSmtpKey = Buffer.alloc(32, 23).toString('base64');
+const strictSmtpEnv = { SMTP_ENCRYPTION_KEY: strictSmtpKey };
+assert.equal(isValidSmtpEncryptionKey(strictSmtpKey), true, '32-byte base64 SMTP key must validate');
+assert.equal(isValidSmtpEncryptionKey('not-a-key'), false, 'invalid SMTP key must fail validation');
+const passwordBundle = await encryptSmtpPassword(strictSmtpEnv, 'Papillon-SMTP-test-password');
+assert.deepEqual(Object.keys(passwordBundle).sort(), ['algorithm', 'ciphertext', 'iv', 'version']);
+assert.equal(passwordBundle.algorithm, 'AES-256-GCM');
+assert.equal(await decryptSmtpPassword(strictSmtpEnv, passwordBundle), 'Papillon-SMTP-test-password');
+await assert.rejects(
+  () => decryptSmtpPassword({ SMTP_ENCRYPTION_KEY: Buffer.alloc(32, 24).toString('base64') }, passwordBundle),
+  /could not be decrypted/,
+  'changing SMTP_ENCRYPTION_KEY must make old encrypted SMTP passwords unreadable'
+);
+
+// Firebase Authentication verifies identity; requireAdmin() separately checks the admin/{uid} grant.
+
 const originalFetch = globalThis.fetch;
 let authFetchCalls = 0;
 let lastAuthUrl = '';
@@ -78,24 +102,24 @@ globalThis.fetch = async (input) => {
   });
 };
 try {
-  const noToken = await readFirebaseSession(new Request('https://example.test/api/admin-session'), { FIREBASE_API_KEY: 'test-api-key' });
+  const noToken = await readFirebaseSession(new Request('https://example.test/api/admin-session'), { FIREBASE_WEB_API_KEY: 'test-api-key' });
   assert.equal(noToken, null, 'a missing ID token must not authenticate');
   assert.equal(authFetchCalls, 0, 'no-token requests must not call Firebase');
 
   const session = await readFirebaseSession(new Request('https://example.test/api/admin-session', {
     headers: { Authorization: 'Bearer valid-test-id-token' }
-  }), { FIREBASE_API_KEY: 'test-api-key' });
-  assert.deepEqual(session, { uid: 'firebase-user-123', email: 'member@example.com' }, 'any valid Firebase user can access the dashboard');
+  }), { FIREBASE_WEB_API_KEY: 'test-api-key' });
+  assert.deepEqual(session, { uid: 'firebase-user-123', email: 'member@example.com' }, 'Firebase ID-token verification should return the verified identity');
   assert.equal(authFetchCalls, 1, 'authentication should make one Firebase token/user lookup');
   assert.match(lastAuthUrl, /identitytoolkit\.googleapis\.com\/v1\/accounts:lookup/, 'ID token is checked with Firebase Authentication');
-  assert.doesNotMatch(lastAuthUrl, /firestore\.googleapis\.com|admins/, 'no Firestore admins allowlist is queried');
+  assert.doesNotMatch(lastAuthUrl, /firestore\.googleapis\.com|admins/, 'identity verification itself does not replace the separate requireAdmin Firestore check');
 
   mockFirebaseUser = { localId: 'disabled-user', email: 'disabled@example.com', disabled: true };
   const disabledSession = await readFirebaseSession(new Request('https://example.test/api/admin-session', {
     headers: { Authorization: 'Bearer disabled-user-token' }
-  }), { FIREBASE_API_KEY: 'test-api-key' });
+  }), { FIREBASE_WEB_API_KEY: 'test-api-key' });
   assert.equal(disabledSession, null, 'disabled Firebase Authentication users must be rejected');
-  assert.equal(authFetchCalls, 2, 'disabled-user validation only checks Firebase Authentication');
+  assert.equal(authFetchCalls, 2, 'disabled-user validation rejects disabled Firebase accounts');
 } finally {
   globalThis.fetch = originalFetch;
 }
@@ -110,6 +134,8 @@ assert.match(dashboardHtml, /data-preference-tab="site"/, 'site details tab shou
 assert.match(dashboardHtml, /data-preference-tab="smtp"/, 'SMTP setup should have its own tab');
 assert.match(dashboardHtml, /id="preferences-panel-smtp"[^>]*data-preference-panel="smtp" hidden/, 'SMTP fields must be grouped in a separate, initially hidden panel');
 assert.match(dashboardHtml, /id="preference-smtp-host"/, 'SMTP host field should remain available in the SMTP tab');
+assert.match(dashboardHtml, /id="preference-smtp-from-email"/, 'SMTP From email should be configurable');
+assert.match(dashboardHtml, /id="smtp-test-button"/, 'dashboard must expose the protected SMTP connection test action');
 assert.match(dashboardHtml, /id="preferences-save-button"/, 'preferences form must retain a save action for the selected tab');
 assert.doesNotMatch(dashboardHtml, /firestore/i, 'dashboard HTML copy should not mention the storage backend');
 assert.doesNotMatch(dashboardScript, /firestore/i, 'dashboard script should not expose the storage backend in UI copy or labels');
@@ -150,7 +176,14 @@ assert.match(puppyContactHtml, /class="site-header"[\s\S]*class="site-footer"/, 
 assert.match(puppyContactJs, /fetch\('\/api\/puppies\?slug='/, 'puppy contact page should load the selected listing');
 assert.match(contactApiSource, /enquiryType === 'puppy-contact'[\s\S]*getPrivateDocument\(context\.env, `puppies\/\$\{puppySlug\}`\)/, 'server should validate puppy contact submissions against a real listing');
 assert.match(contactEmailSource, /Preferred payment method[\s\S]*Shipping address/, 'contact notification should include structured shipping and payment details');
-assert.match(contactApiSource, /fromEmail:\s*email[\s\S]*envelopeFromEmail:\s*smtp\.username[\s\S]*fromName:\s*name[\s\S]*payload:\s*\{[\s\S]*name,[\s\S]*replyTo:\s*email/, 'contact emails should display the form email/name, set Reply-To to the visitor, and use the configured SMTP account for the envelope');
+const { buildCustomerConfirmationEmail } = await import('../functions/lib/contact-email.js');
+const simpleConfirmation = buildCustomerConfirmationEmail({ name: 'Alex', email: 'alex@example.com', puppy: 'Milo' });
+assert.match(simpleConfirmation.text, /^Hello Alex,[\s\S]*Thank you for contacting Papillon & Co\. We have received your message about Milo and will get back to you soon\.[\s\S]*Papillon & Co\.$/, 'customer confirmation should be short, friendly, and mention the enquiry');
+assert.doesNotMatch(simpleConfirmation.text, /Reply-To|submit it again|automatic confirmation/i, 'customer confirmation should not contain unnecessary instructions or reply-to details');
+assert.match(contactApiSource, /subject: `We received your message \| Papillon & Co\.`,/, 'customer confirmation should use a simple subject');
+assert.match(contactApiSource, /fromEmail:\s*smtp\.fromEmail[\s\S]*envelopeFromEmail:\s*smtp\.user[\s\S]*fromName:\s*smtp\.fromName/, 'contact email must use the authenticated SMTP identity for its From header and envelope');
+assert.match(contactApiSource, /replyTo:\s*email/, 'the admin notification must set Reply-To to the visitor');
+assert.match(contactApiSource, /customerEmail[\s\S]*no Reply-To on system-to-customer mail/, 'customer confirmation must omit Reply-To');
 assert.match(contactApiSource, /const messageSubject = \(isPuppyContact[\s\S]*A little hello about \$\{verifiedPuppyName\} 🐾[\s\S]*:\s*subject\)/, 'homepage notifications should use the submitted subject and puppy pages should use a creative listing-name subject');
 assert.match(contactApiSource, /listing\?\.title \|\| listing\?\.name/, 'puppy enquiry subject should prefer a listing title and fall back to the listing name');
 const smtpTransportSource = await (await import('node:fs/promises')).readFile(new URL('../functions/lib/smtp.js', import.meta.url), 'utf8');
@@ -191,4 +224,34 @@ const puppyApi = await (await import('node:fs/promises')).readFile(new URL('../f
 assert.match(puppyApi, /assertFirestoreDocumentFits\(mainFields, `puppies\/\$\{slug\}`/, 'server validates the main listing document size');
 assert.match(puppyApi, /assertFirestoreDocumentFits\(galleryFields, `puppies\/\$\{slug\}\/gallery\/\$\{photoId\}`/, 'server validates each gallery document size');
 assert.ok(dashboardScript.includes("estimateDocumentSizeBytes(estimatedMainDocument, 'puppies/' + slug)"), 'dashboard preflights the main document size before submit');
-console.log('Smoke tests passed: SMTP encryption/decryption and sender identity, Firebase private-key parsing, Firebase-authenticated dashboard access, contact routing, contact email subjects, public no-listings state, removed profile enquiry section, and Firestore 1 MiB document-size guards.');
+// Deployment/security architecture regression guards.
+const fs = await import('node:fs/promises');
+const rootRules = await fs.readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
+const configRules = await fs.readFile(new URL('../config/firestore.rules', import.meta.url), 'utf8');
+assert.equal(rootRules, configRules, 'root and compatibility Firestore rules must match');
+assert.match(rootRules, /allow read, write:\s*if false;/, 'client Firestore access must be deny-all');
+const firebaseConfig = JSON.parse(await fs.readFile(new URL('../firebase.json', import.meta.url), 'utf8'));
+assert.equal(firebaseConfig.firestore.rules, 'firestore.rules', 'Firebase CLI must deploy the root deny-all rules');
+const adminGuard = await fs.readFile(new URL('../functions/lib/require-admin.js', import.meta.url), 'utf8');
+assert.match(adminGuard, /admin\/\$\{user\.uid\}/, 'administrator access must use admin/{uid}');
+assert.match(adminGuard, /data\.role === 'admin'/, 'administrator document must grant the admin role');
+const smtpConfig = await fs.readFile(new URL('../functions/lib/smtp-config.js', import.meta.url), 'utf8');
+assert.match(smtpConfig, /private\/smtp/, 'SMTP settings must use the standalone private/smtp document');
+assert.match(smtpConfig, /const record = \{[\s\S]*password: encryptedPassword,[\s\S]*fromEmail,[\s\S]*uid: String\(uid \|\| ''\)/, 'encrypted SMTP password and administrator UID must be saved');
+assert.match(smtpConfig, /!suppliedPassword && legacyPreferences\?\.smtp/, 'a newly supplied password must bypass unreadable legacy SMTP ciphertext');
+const smtpSaveBlock = smtpConfig.slice(smtpConfig.indexOf('const record = {'), smtpConfig.indexOf('await setPrivateDocument(env, SMTP_PATH, record)'));
+assert.doesNotMatch(smtpSaveBlock, /secure:|security:|enabled:|fromName:/, 'SMTP document must not store legacy security/enabled/fromName fields');
+const smtpTestApi = await fs.readFile(new URL('../functions/api/admin/smtp-test.js', import.meta.url), 'utf8');
+assert.match(smtpTestApi, /sameOriginRequest/, 'SMTP connection test must reject cross-origin requests');
+assert.match(smtpTestApi, /requireAdmin/, 'SMTP connection test must require administrator authorization');
+const genericSendApi = await fs.readFile(new URL('../functions/api/send.js', import.meta.url), 'utf8');
+assert.match(genericSendApi, /No Reply-To is emitted/, 'generic admin-to-customer emails must omit Reply-To');
+assert.match(genericSendApi, /sameOriginRequest[\s\S]*requireAdmin/, 'generic email endpoint must enforce same-origin and administrator checks');
+assert.match(contactApiSource, /replyTo:\s*email/, 'only the admin notification from the public contact form should set Reply-To');
+assert.match(contactApiSource, /customerEmail[\s\S]*no Reply-To on system-to-customer mail/, 'customer confirmation must omit Reply-To');
+const varsExample = await fs.readFile(new URL('../.dev.vars.example', import.meta.url), 'utf8');
+for (const name of ['FIREBASE_PROJECT_ID', 'FIREBASE_WEB_API_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON', 'SMTP_ENCRYPTION_KEY', 'SMTP_HOST_ALLOWLIST']) {
+  assert.match(varsExample, new RegExp('^' + name + '=', 'm'), `the Movara-compatible five-variable template must include ${name}`);
+}
+assert.doesNotMatch(varsExample, /FIREBASE_CLIENT_EMAIL|FIREBASE_PRIVATE_KEY|FIREBASE_API_KEY=/, 'legacy separate Firebase environment variables must be removed');
+console.log('Smoke tests passed: service-account JSON, Firestore admin authorization, Movara-compatible SMTP AES-GCM storage, secure SMTP transport checks, contact notification/confirmation headers, same-origin email endpoints, deny-all rules, preserved listing/contact behavior, and Firestore document-size limits.');
